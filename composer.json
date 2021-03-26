@@ -1,0 +1,44 @@
+{
+    "name": "matchory/response-cache",
+    "description": "A package to add automatic response caching to Laravel APIs.",
+    "type": "library",
+    "require": {
+        "illuminate/support": "^8.34"
+    },
+    "require-dev": {
+        "illuminate/contracts": "^8.34",
+        "orchestra/testbench": "^6.15",
+        "phpunit/phpunit": "^9.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "Matchory\\ResponseCache\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Matchory\\ResponseCache\\Tests\\": "tests/"
+        }
+    },
+    "prefer-stable": true,
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Matchory\\ResponseCache\\ResponseCacheProvider"
+            ],
+            "aliases": {
+                "ResponseCache": "Matchory\\ResponseCache\\Facades\\ResponseCache"
+            }
+        }
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Moritz Friedrich",
+            "email": "moritz@matchory.com"
+        }
+    ]
+}
