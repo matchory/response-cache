@@ -12,7 +12,6 @@ declare(strict_types=1);
 namespace Matchory\ResponseCache\Support;
 
 use Illuminate\Auth\AuthManager;
-use Illuminate\Contracts\Config\Repository;
 use Illuminate\Http\Request;
 use JetBrains\PhpStorm\Pure;
 use Matchory\ResponseCache\Contracts\CacheStrategy;
@@ -22,21 +21,8 @@ use function md5;
 
 class BaseStrategy implements CacheStrategy
 {
-    /**
-     * Default tags to apply to all cache entries based on the config file.
-     *
-     * @var string[]
-     */
-    protected array $defaultTags;
-
-    public function __construct(
-        protected AuthManager $auth,
-        protected Repository $config
-    ) {
-        $this->defaultTags = $this->config->get(
-            'response-cache.tags',
-            []
-        );
+    public function __construct(protected AuthManager $auth)
+    {
     }
 
     /**
@@ -72,7 +58,7 @@ class BaseStrategy implements CacheStrategy
         Request $request,
         Response|null $response = null
     ): array {
-        return $this->defaultTags;
+        return [];
     }
 
     /**
