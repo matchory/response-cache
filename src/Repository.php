@@ -127,13 +127,12 @@ class Repository
      */
     protected function getStore(array|null $tags = null): CacheRepository
     {
-        return $this->isTagged()
+        return $this->supportsTags()
             ? $this->store->tags($tags)
             : $this->store;
     }
 
-    #[Pure]
-    protected function isTagged(): bool
+    protected function supportsTags(): bool
     {
         return $this->store->getStore() instanceof TaggableStore;
     }
