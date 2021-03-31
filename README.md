@@ -7,7 +7,7 @@ This can speed up your application immensely!
 
 Features
 --------
-- **Easy to use**: Just [add the `CacheResponse`](#middleware) to your route!
+- **Easy to use**: Just [add the `CacheResponse`](#using-the-responsecache-middleware-manually) to your route!
 - **Fully customizable**: The cache probably works out of the box, but you can control every aspect of caching if necessary.
 - **Support for authenticated requests**: By default, cache entries will be unique to every authenticated user.
 
