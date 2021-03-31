@@ -15,7 +15,7 @@ use BadMethodCallException;
 use Illuminate\Contracts\Config\Repository as Config;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\Routing\UrlGenerator;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Contracts\Routing\UrlRoutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -300,7 +300,7 @@ class ResponseCache
 
             // Handle Eloquent models by replacing them with their route key in
             // the cache tag
-            if ($value instanceof Model) {
+            if ($value instanceof UrlRoutable) {
                 $value = $value->getRouteKey();
             }
 
