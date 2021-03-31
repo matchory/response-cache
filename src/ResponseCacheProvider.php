@@ -19,6 +19,8 @@ use Matchory\ResponseCache\Commands\FlushCacheCommand;
 use Matchory\ResponseCache\Contracts\CacheStrategy;
 use Matchory\ResponseCache\Support\BaseStrategy;
 
+use function config;
+
 /**
  * Response Cache Provider
  *
@@ -60,7 +62,7 @@ class ResponseCacheProvider extends ServiceProvider
             ->needs(CacheRepository::class)
             ->give(fn() => $this->app
                 ->make(Factory::class)
-                ->store($this->app->get('response-cache.store'))
+                ->store(config('response-cache.store'))
             );
 
         $this->app->bind(Repository::class);
