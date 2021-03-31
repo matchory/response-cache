@@ -18,7 +18,7 @@ use Matchory\ResponseCache\Repository;
 
 class FlushCacheCommand extends Command
 {
-    protected $signature = 'response-cache:flush {tags* : Tags to flush}';
+    protected $signature = 'response-cache:flush {tags?* : Tags to flush}';
 
     protected $description = 'Flushes the response cache';
 
