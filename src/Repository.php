@@ -20,6 +20,13 @@ use Matchory\ResponseCache\Events\Flush;
 use Psr\SimpleCache\InvalidArgumentException;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Cache Repository
+ * ================
+ * Responsible for cache persistence.
+ *
+ * @package Matchory\ResponseCache
+ */
 class Repository
 {
     #[Pure]
@@ -30,6 +37,8 @@ class Repository
     }
 
     /**
+     * Retrieves a response from the cache.
+     *
      * @param string        $key
      * @param string[]|null $tags
      *
@@ -49,6 +58,8 @@ class Repository
     }
 
     /**
+     * Checks whether a response is cached.
+     *
      * @param string        $key
      * @param string[]|null $tags
      *
@@ -62,6 +73,8 @@ class Repository
     }
 
     /**
+     * Puts a response into the cache.
+     *
      * @param string        $key
      * @param Response      $response
      * @param string[]|null $tags
@@ -81,6 +94,8 @@ class Repository
     }
 
     /**
+     * Flushes the response cache.
+     *
      * @param string[]|null $tags
      *
      * @throws BadMethodCallException
@@ -93,6 +108,8 @@ class Repository
     }
 
     /**
+     * Deletes a cached response.
+     *
      * @param string        $key
      * @param string[]|null $tags
      *
@@ -103,15 +120,26 @@ class Repository
         $this->getStore($tags)->forget($key);
     }
 
+    /**
+     * Hydrates a serialized response. This method may be overridden by children
+     * implementations to add custom hydration mechanisms.
+     *
+     * @param mixed $cached Cached representation of the response.
+     *
+     * @return Response Hydrated response instance.
+     */
     protected function hydrate(mixed $cached): Response
     {
         return $cached;
     }
 
     /**
-     * @param Response $response
+     * Serializes the response. This method may be overridden by children
+     * implementations to add custom serialization mechanisms.
      *
-     * @return mixed
+     * @param Response $response Response instance.
+     *
+     * @return mixed Serialized response representation.
      * @noinspection PhpMixedReturnTypeCanBeReducedInspection
      */
     protected function serialize(Response $response): mixed
@@ -120,6 +148,9 @@ class Repository
     }
 
     /**
+     * Retrieves the store instance. If it supports tags, a tagged instance for
+     * the given tags will be returned, the untagged store otherwise.
+     *
      * @param string[]|null $tags
      *
      * @return CacheRepository
@@ -132,6 +163,11 @@ class Repository
             : $this->store;
     }
 
+    /**
+     * Checks whether the store supports tags.
+     *
+     * @return bool
+     */
     protected function supportsTags(): bool
     {
         return $this->store->getStore() instanceof TaggableStore;
