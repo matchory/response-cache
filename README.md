@@ -1,4 +1,4 @@
-Response Cache
+Response Cache [![Latest Stable Version](https://poser.pugx.org/matchory/response-cache/v)](https://packagist.org/packages/matchory/response-cache) [![Total Downloads](https://poser.pugx.org/matchory/response-cache/downloads)](https://packagist.org/packages/matchory/response-cache) [![Latest Unstable Version](https://poser.pugx.org/matchory/response-cache/v/unstable)](https://packagist.org/packages/matchory/response-cache) [![License](https://poser.pugx.org/matchory/response-cache/license)](https://packagist.org/packages/matchory/response-cache)
 ==============
 > A Laravel package that adds a smart cache for full responses
 
