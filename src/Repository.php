@@ -135,6 +135,6 @@ class Repository
     #[Pure]
     protected function isTagged(): bool
     {
-        return $this->store instanceof TaggableStore;
+        return $this->store->getStore() instanceof TaggableStore;
     }
 }
