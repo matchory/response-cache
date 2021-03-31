@@ -13,8 +13,8 @@ namespace Matchory\ResponseCache\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Matchory\ResponseCache\ResponseCache;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Bypass Cache Middleware

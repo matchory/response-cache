@@ -15,10 +15,10 @@ use BadMethodCallException;
 use Illuminate\Cache\TaggableStore;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Contracts\Events\Dispatcher;
-use Illuminate\Http\Response;
 use JetBrains\PhpStorm\Pure;
 use Matchory\ResponseCache\Events\Flush;
 use Psr\SimpleCache\InvalidArgumentException;
+use Symfony\Component\HttpFoundation\Response;
 
 class Repository
 {

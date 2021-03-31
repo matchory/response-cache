@@ -14,9 +14,9 @@ namespace Matchory\ResponseCache\Support;
 use Illuminate\Auth\AuthManager;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use JetBrains\PhpStorm\Pure;
 use Matchory\ResponseCache\Contracts\CacheStrategy;
+use Symfony\Component\HttpFoundation\Response;
 
 use function md5;
 

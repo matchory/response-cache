@@ -171,8 +171,8 @@ class MyStrategy extends BaseStrategy
 To customize whether a response is cached or not, you can implement one or more helpers:
 ```php
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Matchory\ResponseCache\Support\BaseStrategy;
+use Symfony\Component\HttpFoundation\Response;
 
 class MyStrategy extends BaseStrategy
 {
@@ -195,8 +195,8 @@ them!
 To make this as easy as possible, strategies provide a method to pull tags from a request and response:
 ```php
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Matchory\ResponseCache\Support\BaseStrategy;
+use Symfony\Component\HttpFoundation\Response;
 
 class MyStrategy extends BaseStrategy
 {
@@ -243,8 +243,8 @@ serialization is deferred to Laravel's cache implementation. In rare cases, you 
 after hydrating it.  
 To do so, start by extending the `Repository` class:
 ```php
-use Illuminate\Http\Response;
 use Matchory\ResponseCache\Repository;
+use Symfony\Component\HttpFoundation\Response;
 
 class CustomRepository extends Repository
 {

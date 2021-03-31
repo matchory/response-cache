@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace Matchory\ResponseCache\Contracts;
 
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
+use Symfony\Component\HttpFoundation\Response;
 
 interface CacheStrategy
 {

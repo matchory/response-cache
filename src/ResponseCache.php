@@ -16,12 +16,12 @@ use Illuminate\Contracts\Config\Repository as Config;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use JetBrains\PhpStorm\Pure;
 use Matchory\ResponseCache\Contracts\CacheStrategy;
 use Psr\SimpleCache\InvalidArgumentException;
+use Symfony\Component\HttpFoundation\Response;
 
 use function array_filter;
 use function array_merge;

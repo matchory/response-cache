@@ -16,12 +16,12 @@ use Closure;
 use Illuminate\Config\Repository;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use JetBrains\PhpStorm\Pure;
 use Matchory\ResponseCache\Events\Hit;
 use Matchory\ResponseCache\Events\Miss;
 use Matchory\ResponseCache\ResponseCache;
 use Psr\SimpleCache\InvalidArgumentException;
+use Symfony\Component\HttpFoundation\Response;
 
 use function array_shift;
 use function is_numeric;
