@@ -163,7 +163,7 @@ using several approaches:
 This library supports adding dynamic tags that are based on route bindings. This works pretty much the same as with ordinary route bindings, but with the added
 benefit of also having access to all request values, not just those mentioned in the route itself.  
 To add a binding to your cache tag, simply include the name of a parameter in curly braces: `flights.{flight}`. As soon as something is to be fetched from or
-put into the cache, this binding will be resolved using the current request instance. If the parameter `flight` was an instance of an Eloquent model, it would 
+put into the cache, this binding will be resolved using the current request instance. If the parameter `flight` was an instance of an Eloquent model, it would
 be replaced with its route key name, so probably the flight ID!
 
 Take a look at the following example:
@@ -255,18 +255,23 @@ class MyStrategy extends BaseStrategy
 
 ### Using the `ResponseCache` middleware manually
 Instead of simply adding the caching middleware to all web routes as shown above, you can of course also add it to selected routes manually. In this case, you
-also have the possibility to configure the time to leave and add a set of tags:
-
+also have the possibility to configure the time to leave and add a set of tags per route:
 ```php
+// Default settings as set in the config file
+Route::get('/foo')->middleware('response_cache')
+
 // TTL of 60 seconds
-Route::get('/foo')->middleware('response_cache:60');
+Route::get('/bar')->middleware('response_cache:60');
 
 // Tags "foo", "bar" and "baz" are added
-Route::get('/bar')->middleware('response_cache:foo,bar,baz'); 
+Route::get('/baz')->middleware('response_cache:foo,bar,baz'); 
 
 // TTL of 60 seconds and tags "foo", "bar" and "baz" are added
-Route::get('/bar')->middleware('response_cache:60,foo,bar,baz');
+Route::get('/quz')->middleware('response_cache:60,foo,bar,baz');
 ```
+
+If the first parameter to the middleware is a number, it will be interpreted as a TTL value, everything that follows as tags. The TTL will override the
+[configuration value](#ttl-environment-variable-response_cache_ttl), tags will be merged.
 
 ### Reacting to cache events
 This library exposes some events you can listen for and act accordingly. This is probably most helpful during [debugging](#debugging).
