@@ -76,7 +76,7 @@ class CacheResponse
         // If the first value passed to the middleware is a number, we'll use it
         // as the TTL. Everything subsequent parameter is interpreted as a tag.
         $ttl = isset($args[0]) && is_numeric($args[0])
-            ? array_shift($args)
+            ? (int)array_shift($args)
             : null;
         $tags = $args;
 
