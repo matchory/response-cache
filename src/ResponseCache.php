@@ -13,7 +13,6 @@ namespace Matchory\ResponseCache;
 
 use BadMethodCallException;
 use Illuminate\Contracts\Config\Repository as Config;
-use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Contracts\Routing\UrlRoutable;
 use Illuminate\Http\Request;
@@ -59,7 +58,6 @@ class ResponseCache
      * @param UrlGenerator  $urlGenerator
      * @param Repository    $cache
      * @param CacheStrategy $strategy
-     * @param Application   $app
      *
      * @internal Should only be invoked by the DI container
      */
@@ -67,14 +65,11 @@ class ResponseCache
         protected Config $config,
         protected UrlGenerator $urlGenerator,
         protected Repository $cache,
-        protected CacheStrategy $strategy,
-        Application $app
+        protected CacheStrategy $strategy
     ) {
-        $this->enabled = (
-            $this->config->get('response-cache.enabled') ||
-            ! $app->environment('testing') ||
-            $app->runningUnitTests() ||
-            $app->runningInConsole()
+        $this->enabled = $this->config->get(
+            'response-cache.enabled',
+            true
         );
     }
 
