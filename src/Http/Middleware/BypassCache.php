@@ -18,10 +18,10 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Bypass Cache Middleware
- * =======================
+ *
  * If added to a route, the response cache will be bypassed.
  *
- * @package Matchory\ResponseCache\Http\Middleware
+ * @package Matchory\ResponseCache
  */
 class BypassCache
 {

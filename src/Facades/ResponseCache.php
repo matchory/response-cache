@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Facade;
  * @method static void delete(array|string $uri, array|null $tags = null) Deletes one or more URIs
  * @method static bool enabled() Checks whether the cache is enabled
  *
- * @package Matchory\ResponseCache\Facades
+ * @package Matchory\ResponseCache
  * @see     \Matchory\ResponseCache\ResponseCache
  */
 class ResponseCache extends Facade

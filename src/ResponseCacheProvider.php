@@ -52,6 +52,53 @@ class ResponseCacheProvider extends ServiceProvider
         $this->registerCommands();
     }
 
+    protected function configure(): void
+    {
+        $this->mergeConfigFrom(
+            __DIR__ . '/../config/response-cache.php',
+            'response-cache'
+        );
+
+        $this->publishes([
+            __DIR__ . '/../config/' => $this->app->configPath(),
+        ], 'config');
+    }
+
+    /**
+     * @throws LogicException
+     */
+    protected function registerCache(): void
+    {
+        $this->app->singleton(ResponseCache::class);
+        $this->app->alias(ResponseCache::class, 'response-cache');
+    }
+
+    protected function registerCommands(): void
+    {
+        if ( ! $this->app->runningInConsole()) {
+            return;
+        }
+
+        $this->commands([
+            FlushCacheCommand::class,
+        ]);
+    }
+
+    /**
+     * @throws LogicException
+     */
+    protected function registerDefaultStrategy(): void
+    {
+        $this->app->bind(
+            CacheStrategy::class,
+            BaseStrategy::class
+        );
+        $this->app->alias(
+            CacheStrategy::class,
+            'response-cache.strategy'
+        );
+    }
+
     /**
      * @throws LogicException
      */
@@ -70,52 +117,5 @@ class ResponseCacheProvider extends ServiceProvider
             Repository::class,
             'response-cache.repository'
         );
-    }
-
-    /**
-     * @throws LogicException
-     */
-    protected function registerCache(): void
-    {
-        $this->app->singleton(ResponseCache::class);
-        $this->app->alias(ResponseCache::class, 'response-cache');
-    }
-
-    /**
-     * @throws LogicException
-     */
-    protected function registerDefaultStrategy(): void
-    {
-        $this->app->bind(
-            CacheStrategy::class,
-            BaseStrategy::class
-        );
-        $this->app->alias(
-            CacheStrategy::class,
-            'response-cache.strategy'
-        );
-    }
-
-    protected function configure(): void
-    {
-        $this->mergeConfigFrom(
-            __DIR__ . '/../config/response-cache.php',
-            'response-cache'
-        );
-
-        $this->publishes([
-            __DIR__ . '/../config/' => $this->app->configPath(),
-        ], 'config');
-    }
-
-    protected function registerCommands(): void
-    {
-        if ( ! $this->app->runningInConsole()) {
-            return;
-        }
-
-        $this->commands([
-            FlushCacheCommand::class,
-        ]);
     }
 }

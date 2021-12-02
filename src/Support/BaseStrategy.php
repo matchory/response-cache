@@ -39,10 +39,8 @@ class BaseStrategy implements CacheStrategy
     /**
      * @inheritDoc
      */
-    public function shouldCache(
-        Request $request,
-        Response $response
-    ): bool {
+    public function shouldCache(Request $request, Response $response): bool
+    {
         if ( ! $this->isMethodCachable($request)) {
             return false;
         }
@@ -59,6 +57,51 @@ class BaseStrategy implements CacheStrategy
         Response|null $response = null
     ): array {
         return [];
+    }
+
+    /**
+     * Retrieves a suffix to append to the key before it is hashed. This allows
+     * to constrain the cache key to the authenticated user, for example.
+     *
+     * @param Request $request
+     *
+     * @return string
+     * @noinspection PhpUndefinedMethodInspection
+     * @noinspection PhpUnusedParameterInspection
+     */
+    protected function buildSuffix(Request $request): string
+    {
+        return $this->auth->check()
+            ? (string)$this->auth->id()
+            : '';
+    }
+
+    /**
+     * Extracts a unique identifier from a request. The default implementation
+     * will use the full URL as provided by Laravel.
+     *
+     * @param Request $request Current request instance.
+     *
+     * @return string Unique request identifier.
+     */
+    protected function extractRequestIdentifier(Request $request): string
+    {
+        return $request->method() . $request->fullUrl();
+    }
+
+    /**
+     * Hashes the cache key. The default implementation will return an MD5 hash
+     * of the given key.
+     *
+     * @param string $key
+     *
+     * @return string
+     */
+    #[Pure]
+    protected function hash(
+        string $key
+    ): string {
+        return md5($key);
     }
 
     /**
@@ -86,50 +129,5 @@ class BaseStrategy implements CacheStrategy
         Response $response
     ): bool {
         return $response->isSuccessful() || $response->isRedirection();
-    }
-
-    /**
-     * Extracts a unique identifier from a request. The default implementation
-     * will use the full URL as provided by Laravel.
-     *
-     * @param Request $request Current request instance.
-     *
-     * @return string Unique request identifier.
-     */
-    protected function extractRequestIdentifier(Request $request): string
-    {
-        return $request->method() . $request->fullUrl();
-    }
-
-    /**
-     * Retrieves a suffix to append to the key before it is hashed. This allows
-     * to constrain the cache key to the authenticated user, for example.
-     *
-     * @param Request $request
-     *
-     * @return string
-     * @noinspection PhpUndefinedMethodInspection
-     * @noinspection PhpUnusedParameterInspection
-     */
-    protected function buildSuffix(Request $request): string
-    {
-        return $this->auth->check()
-            ? (string)$this->auth->id()
-            : '';
-    }
-
-    /**
-     * Hashes the cache key. The default implementation will return an MD5 hash
-     * of the given key.
-     *
-     * @param string $key
-     *
-     * @return string
-     */
-    #[Pure]
-    protected function hash(
-        string $key
-    ): string {
-        return md5($key);
     }
 }

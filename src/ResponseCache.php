@@ -74,35 +74,6 @@ class ResponseCache
     }
 
     /**
-     * Checks whether the cache is enabled.
-     *
-     * @return bool `true` if it is enabled, `false` otherwise
-     */
-    #[Pure]
-    public function enabled(): bool
-    {
-        return $this->enabled;
-    }
-
-    /**
-     * Checks whether the response for a request has already been cached.
-     *
-     * @param Request       $request Request to check the cache status for
-     * @param string[]|null $tags    Tags the cached entry is tagged with
-     *
-     * @return bool `true` if a cached response exists, `false` otherwise
-     * @throws BadMethodCallException
-     * @throws InvalidArgumentException
-     */
-    public function has(Request $request, array|null $tags = null): bool
-    {
-        $key = $this->strategy->key($request);
-        $tags = $this->resolveTags($tags, $request);
-
-        return $this->cache->has($key, $tags);
-    }
-
-    /**
      * Retrieves a response from the cache. If there is no cached response for
      * the given request, `null` will be returned.
      *
@@ -122,6 +93,79 @@ class ResponseCache
         $tags = $this->resolveTags($tags, $request);
 
         return $this->cache->get($key, $tags);
+    }
+
+    /**
+     * Deletes one or more specific URLs from the cache. Note that this can't
+     * take bound parameters or tags specific to request instances into account.
+     *
+     * @param string|string[] $uri  URI or URIs to remove from the cache.
+     * @param string[]        $tags Tags to flush the cache for.
+     *
+     * @throws BadMethodCallException
+     * @throws InvalidArgumentException
+     */
+    public function delete(array|string $uri, array $tags = []): void
+    {
+        $uris = (array)$uri;
+
+        Collection::make($uris)->each(function (
+            string $uri
+        ) use ($tags): void {
+            $url = $this->urlGenerator->to($uri);
+            $request = Request::create($url);
+            $key = $this->strategy->key($request);
+
+            if ($this->cache->has($key, $tags)) {
+                $this->cache->delete($key, $tags);
+            }
+        });
+    }
+
+    /**
+     * Checks whether the cache is enabled.
+     *
+     * @return bool `true` if it is enabled, `false` otherwise
+     */
+    #[Pure]
+    public function enabled(): bool
+    {
+        return $this->enabled;
+    }
+
+    /**
+     * Flushes all cached items, or all items with one or more tags.
+     *
+     * @param string[]|null $tags Tags to flush. Pass `null` to flush all tags.
+     *
+     * @throws BadMethodCallException
+     */
+    public function flush(array|null $tags = null): void
+    {
+        $tags = array_merge(
+            $this->getDefaultTags(),
+            $tags ?? [],
+        );
+
+        $this->cache->flush($tags);
+    }
+
+    /**
+     * Checks whether the response for a request has already been cached.
+     *
+     * @param Request       $request Request to check the cache status for
+     * @param string[]|null $tags    Tags the cached entry is tagged with
+     *
+     * @return bool `true` if a cached response exists, `false` otherwise
+     * @throws BadMethodCallException
+     * @throws InvalidArgumentException
+     */
+    public function has(Request $request, array|null $tags = null): bool
+    {
+        $key = $this->strategy->key($request);
+        $tags = $this->resolveTags($tags, $request);
+
+        return $this->cache->has($key, $tags);
     }
 
     /**
@@ -168,74 +212,46 @@ class ResponseCache
     }
 
     /**
-     * Deletes one or more specific URLs from the cache. Note that this can't
-     * take bound parameters or tags specific to request instances into account.
+     * Adds original cache timing information to the response, if enabled.
      *
-     * @param string|string[] $uri  URI or URIs to remove from the cache.
-     * @param string[]        $tags Tags to flush the cache for.
+     * @param Response $response Response instance to add the information to.
      *
-     * @throws BadMethodCallException
-     * @throws InvalidArgumentException
+     * @return Response New response instance with the header applied to.
      */
-    public function delete(array|string $uri, array $tags = []): void
+    protected function addServerTiming(Response $response): Response
     {
-        $uris = (array)$uri;
+        if ( ! $this->config->get('response-cache.server_timing')) {
+            return $response;
+        }
 
-        Collection::make($uris)->each(function (
-            string $uri
-        ) use ($tags): void {
-            $url = $this->urlGenerator->to($uri);
-            $request = Request::create($url);
-            $key = $this->strategy->key($request);
+        $cloned = clone $response;
 
-            if ($this->cache->has($key, $tags)) {
-                $this->cache->delete($key, $tags);
-            }
-        });
+        $cloned->headers->set('Server-Timing', sprintf(
+            'response-cache;desc="%s"',
+            Carbon::now()->toRfc2822String()
+        ));
+
+        return $cloned;
     }
 
     /**
-     * Flushes all cached items, or all items with one or more tags.
+     * Retrieves the default tags as specified in the configuration file.
      *
-     * @param string[]|null $tags Tags to flush. Pass `null` to flush all tags.
-     *
-     * @throws BadMethodCallException
+     * @return string[] List of tags
      */
-    public function flush(array|null $tags = null): void
+    protected function getDefaultTags(): array
     {
-        $tags = array_merge(
-            $this->getDefaultTags(),
-            $tags ?? [],
-        );
-
-        $this->cache->flush($tags);
+        return $this->config->get('response-cache.tags', []);
     }
 
     /**
-     * Resolves all tags to apply to a given request/response pair, and replaces
-     * bound parameters in all cache tags.
+     * Retrieves the default TTL as specified in the configuration file.
      *
-     * @param Request       $request  Request instance.
-     * @param Response|null $response Response instance.
-     * @param string[]      $tags     Individual tags to add to this response.
-     *
-     * @return string[] List of finalized tags.
+     * @return int|null Time-to-live in seconds if configured, `null` otherwise
      */
-    protected function resolveTags(
-        array $tags,
-        Request $request,
-        Response|null $response = null
-    ): array {
-        $resolved = array_merge(
-            $this->strategy->tags($request, $response),
-            $this->getDefaultTags(),
-            $tags ?? [],
-        );
-
-        return array_map(fn(string $tag) => $this->replaceBinding(
-            $tag,
-            $request
-        ), array_filter($resolved));
+    protected function getDefaultTtl(): int|null
+    {
+        return $this->config->get('response-cache.ttl');
     }
 
     /**
@@ -255,8 +271,8 @@ class ResponseCache
      *          binding to the user model: `/users/{user}`. Now what will happen
      *          is that we detect `{user}` as a potential binding parameter, and
      *          fetch the value for the `user` parameter from the request, which
-     *          yields an instance of `App\User`. As that's is an Eloquent model
-     *          we replace it with it's route key, which will probably be its ID
+     *          yields an instance of `App\User`. As that is an Eloquent model,
+     *          we replace it with its route key, which will probably be its ID
      *          or UUID (let's assume `42`). Therefore, after iterating through,
      *          we will return the following, finalized cache tag: `users.42`!
      */
@@ -317,45 +333,29 @@ class ResponseCache
     }
 
     /**
-     * Adds original cache timing information to the response, if enabled.
+     * Resolves all tags to apply to a given request/response pair, and replaces
+     * bound parameters in all cache tags.
      *
-     * @param Response $response Response instance to add the information to.
+     * @param Request       $request  Request instance.
+     * @param Response|null $response Response instance.
+     * @param string[]      $tags     Individual tags to add to this response.
      *
-     * @return Response New response instance with the header applied to.
+     * @return string[] List of finalized tags.
      */
-    protected function addServerTiming(Response $response): Response
-    {
-        if ( ! $this->config->get('response-cache.server_timing')) {
-            return $response;
-        }
+    protected function resolveTags(
+        array $tags,
+        Request $request,
+        Response|null $response = null
+    ): array {
+        $resolved = array_merge(
+            $this->strategy->tags($request, $response),
+            $this->getDefaultTags(),
+            $tags ?? [],
+        );
 
-        $cloned = clone $response;
-
-        $cloned->headers->set('Server-Timing', sprintf(
-            'response-cache;desc="%s"',
-            Carbon::now()->toRfc2822String()
-        ));
-
-        return $cloned;
-    }
-
-    /**
-     * Retrieves the default TTL as specified in the configuration file.
-     *
-     * @return int|null Time-to-live in seconds if configured, `null` otherwise
-     */
-    protected function getDefaultTtl(): int|null
-    {
-        return $this->config->get('response-cache.ttl');
-    }
-
-    /**
-     * Retrieves the default tags as specified in the configuration file.
-     *
-     * @return string[] List of tags
-     */
-    protected function getDefaultTags(): array
-    {
-        return $this->config->get('response-cache.tags', []);
+        return array_map(fn(string $tag) => $this->replaceBinding(
+            $tag,
+            $request
+        ), array_filter($resolved));
     }
 }

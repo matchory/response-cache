@@ -22,7 +22,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Cache Repository
- * ================
+ *
  * Responsible for cache persistence.
  *
  * @package Matchory\ResponseCache
@@ -55,6 +55,33 @@ class Repository
         }
 
         return $this->hydrate($response);
+    }
+
+    /**
+     * Deletes a cached response.
+     *
+     * @param string        $key
+     * @param string[]|null $tags
+     *
+     * @throws BadMethodCallException
+     */
+    public function delete(string $key, array|null $tags = null): void
+    {
+        $this->getStore($tags)->forget($key);
+    }
+
+    /**
+     * Flushes the response cache.
+     *
+     * @param string[]|null $tags
+     *
+     * @throws BadMethodCallException
+     */
+    public function flush(array|null $tags = null): void
+    {
+        $this->getStore($tags)->clear();
+
+        $this->eventDispatcher->dispatch(new Flush($tags));
     }
 
     /**
@@ -94,30 +121,19 @@ class Repository
     }
 
     /**
-     * Flushes the response cache.
+     * Retrieves the store instance. If it supports tags, a tagged instance for
+     * the given tags will be returned, the untagged store otherwise.
      *
      * @param string[]|null $tags
      *
+     * @return CacheRepository
      * @throws BadMethodCallException
      */
-    public function flush(array|null $tags = null): void
+    protected function getStore(array|null $tags = null): CacheRepository
     {
-        $this->getStore($tags)->clear();
-
-        $this->eventDispatcher->dispatch(new Flush($tags));
-    }
-
-    /**
-     * Deletes a cached response.
-     *
-     * @param string        $key
-     * @param string[]|null $tags
-     *
-     * @throws BadMethodCallException
-     */
-    public function delete(string $key, array|null $tags = null): void
-    {
-        $this->getStore($tags)->forget($key);
+        return $this->supportsTags()
+            ? $this->store->tags($tags)
+            : $this->store;
     }
 
     /**
@@ -145,22 +161,6 @@ class Repository
     protected function serialize(Response $response): mixed
     {
         return $response;
-    }
-
-    /**
-     * Retrieves the store instance. If it supports tags, a tagged instance for
-     * the given tags will be returned, the untagged store otherwise.
-     *
-     * @param string[]|null $tags
-     *
-     * @return CacheRepository
-     * @throws BadMethodCallException
-     */
-    protected function getStore(array|null $tags = null): CacheRepository
-    {
-        return $this->supportsTags()
-            ? $this->store->tags($tags)
-            : $this->store;
     }
 
     /**

@@ -14,12 +14,16 @@ declare(strict_types=1);
 
 namespace Matchory\ResponseCache\Events;
 
+use JetBrains\PhpStorm\Pure;
+
 class Flush
 {
+    #[Pure]
     public function __construct(protected array|null $tags = null)
     {
     }
 
+    #[Pure]
     public function getTags(): array|null
     {
         return $this->tags;

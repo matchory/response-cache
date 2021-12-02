@@ -26,6 +26,16 @@ interface CacheStrategy
     public function key(Request $request): string;
 
     /**
+     * Determines whether the response should be cached.
+     *
+     * @param Request  $request
+     * @param Response $response
+     *
+     * @return bool
+     */
+    public function shouldCache(Request $request, Response $response): bool;
+
+    /**
      * Generates a list of tags for a request. If the cache is missed, this
      * method will be invoked with the generated response passed, providing an
      * opportunity to add tags dependent on the generated response, for example
@@ -40,14 +50,4 @@ interface CacheStrategy
         Request $request,
         Response|null $response = null
     ): array;
-
-    /**
-     * Determines whether the response should be cached.
-     *
-     * @param Request  $request
-     * @param Response $response
-     *
-     * @return bool
-     */
-    public function shouldCache(Request $request, Response $response): bool;
 }
