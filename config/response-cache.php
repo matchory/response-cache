@@ -49,7 +49,9 @@ return [
     | middleware and strategy.
     |
     */
-    'tags' => env('RESPONSE_CACHE_TAGS', []),
+    'tags' => ($tags = env('RESPONSE_CACHE_TAGS'))
+        ? explode(',', (string)$tags)
+        : [],
 
     /*
     |--------------------------------------------------------------------------
