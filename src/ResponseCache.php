@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace Matchory\ResponseCache;
 
 use BadMethodCallException;
+use Closure;
 use Illuminate\Contracts\Config\Repository as Config;
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Contracts\Routing\UrlRoutable;
@@ -38,13 +39,6 @@ class ResponseCache
     public const BYPASS_ATTRIBUTE = 'response-cache.bypass';
 
     /**
-     * Stores resolved tags to speed up repeated queries.
-     *
-     * @var array<string, string>
-     */
-    private static array $resolvedTags = [];
-
-    /**
      * Whether the cache is enabled.
      *
      * @var bool
@@ -52,9 +46,16 @@ class ResponseCache
     protected bool $enabled;
 
     /**
+     * Stores resolved tags to speed up repeated queries.
+     *
+     * @var array<string, string>
+     */
+    private array $resolvedTags = [];
+
+    /**
      * Creates a new response cache instance.
      *
-     * @param Config        $config
+     * @param Closure       $configResolver
      * @param UrlGenerator  $urlGenerator
      * @param Repository    $cache
      * @param CacheStrategy $strategy
@@ -62,12 +63,12 @@ class ResponseCache
      * @internal Should only be invoked by the DI container
      */
     public function __construct(
-        protected Config $config,
+        protected Closure $configResolver,
         protected UrlGenerator $urlGenerator,
         protected Repository $cache,
         protected CacheStrategy $strategy
     ) {
-        $this->enabled = $this->config->get(
+        $this->enabled = $this->config()->get(
             'response-cache.enabled',
             true
         );
@@ -220,7 +221,7 @@ class ResponseCache
      */
     protected function addServerTiming(Response $response): Response
     {
-        if ( ! $this->config->get('response-cache.server_timing')) {
+        if ( ! $this->config()->get('response-cache.server_timing')) {
             return $response;
         }
 
@@ -241,7 +242,7 @@ class ResponseCache
      */
     protected function getDefaultTags(): array
     {
-        return $this->config->get('response-cache.tags', []);
+        return $this->config()->get('response-cache.tags', []);
     }
 
     /**
@@ -251,7 +252,7 @@ class ResponseCache
      */
     protected function getDefaultTtl(): int|null
     {
-        return $this->config->get('response-cache.ttl');
+        return $this->config()->get('response-cache.ttl');
     }
 
     /**
@@ -278,8 +279,8 @@ class ResponseCache
      */
     protected function replaceBinding(string $tag, Request $request): string
     {
-        if (isset(self::$resolvedTags[$tag])) {
-            return self::$resolvedTags[$tag];
+        if (isset($this->resolvedTags[$tag])) {
+            return $this->resolvedTags[$tag];
         }
 
         // If there is no opening curly brace in the tag, there's no need to run
@@ -329,7 +330,7 @@ class ResponseCache
             $tag = str_replace($match, $value, $tag);
         }
 
-        return self::$resolvedTags[$tag] = $tag;
+        return $this->resolvedTags[$tag] = $tag;
     }
 
     /**
@@ -357,5 +358,10 @@ class ResponseCache
             $tag,
             $request
         ), array_filter($resolved));
+    }
+
+    private function config(): Config
+    {
+        return ($this->configResolver)();
     }
 }

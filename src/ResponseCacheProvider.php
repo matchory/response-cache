@@ -13,6 +13,8 @@ namespace Matchory\ResponseCache;
 
 use Illuminate\Contracts\Cache\Factory;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
+use Illuminate\Contracts\Config\Repository as Config;
+use Illuminate\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
 use LogicException;
 use Matchory\ResponseCache\Commands\FlushCacheCommand;
@@ -71,6 +73,16 @@ class ResponseCacheProvider extends ServiceProvider
     {
         $this->app->singleton(ResponseCache::class);
         $this->app->alias(ResponseCache::class, 'response-cache');
+
+        // Using a configuration resolver callback ensures configuration values
+        // can be changed at runtime, if we're running within Laravel Octane.
+        // See: https://laravel.com/docs/9.x/octane#configuration-repository-injection
+        $this->app
+            ->when(ResponseCache::class)
+            ->needs('$configResolver')
+            ->give(fn(Application $app): Config => $app->make(
+                'config'
+            ));
     }
 
     protected function registerCommands(): void
