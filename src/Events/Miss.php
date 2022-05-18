@@ -14,12 +14,16 @@ namespace Matchory\ResponseCache\Events;
 use Illuminate\Http\Request;
 use JetBrains\PhpStorm\Pure;
 
+/**
+ * Miss Event
+ *
+ * @bundle Matchory\ResponseCache
+ */
 class Miss
 {
     #[Pure]
-    public function __construct(
-        protected Request $request
-    ) {
+    public function __construct(protected Request $request)
+    {
     }
 
     #[Pure]

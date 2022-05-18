@@ -25,7 +25,7 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * Responsible for cache persistence.
  *
- * @package Matchory\ResponseCache
+ * @bundle Matchory\ResponseCache
  */
 class Repository
 {

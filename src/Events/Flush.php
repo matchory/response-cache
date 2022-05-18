@@ -16,6 +16,11 @@ namespace Matchory\ResponseCache\Events;
 
 use JetBrains\PhpStorm\Pure;
 
+/**
+ * Flush Event
+ *
+ * @bundle Matchory\ResponseCache
+ */
 class Flush
 {
     #[Pure]

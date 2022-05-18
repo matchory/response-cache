@@ -19,6 +19,11 @@ use Symfony\Component\HttpFoundation\Response;
 
 use function md5;
 
+/**
+ * Base Strategy
+ *
+ * @bundle Matchory\ResponseCache
+ */
 class BaseStrategy implements CacheStrategy
 {
     public function __construct(protected AuthManager $auth)
@@ -52,10 +57,8 @@ class BaseStrategy implements CacheStrategy
      * @inheritDoc
      */
     #[Pure]
-    public function tags(
-        Request $request,
-        Response|null $response = null
-    ): array {
+    public function tags(Request $request, Response|null $response = null): array
+    {
         return [];
     }
 
@@ -98,9 +101,8 @@ class BaseStrategy implements CacheStrategy
      * @return string
      */
     #[Pure]
-    protected function hash(
-        string $key
-    ): string {
+    protected function hash(string $key): string
+    {
         return md5($key);
     }
 
@@ -125,9 +127,8 @@ class BaseStrategy implements CacheStrategy
      * @return bool Whether the response is successful
      */
     #[Pure]
-    protected function isSuccessful(
-        Response $response
-    ): bool {
+    protected function isSuccessful(Response $response): bool
+    {
         return $response->isSuccessful() || $response->isRedirection();
     }
 }

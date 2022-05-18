@@ -14,6 +14,11 @@ namespace Matchory\ResponseCache\Contracts;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Cache Strategy
+ *
+ * @bundle Matchory\ResponseCache
+ */
 interface CacheStrategy
 {
     /**
@@ -46,8 +51,5 @@ interface CacheStrategy
      *
      * @return string[]
      */
-    public function tags(
-        Request $request,
-        Response|null $response = null
-    ): array;
+    public function tags(Request $request, Response|null $response = null): array;
 }

@@ -16,6 +16,11 @@ use BadMethodCallException;
 use Illuminate\Console\Command;
 use Matchory\ResponseCache\Repository;
 
+/**
+ * FlushCacheCommand
+ *
+ * @bundle Matchory\ResponseCache
+ */
 class FlushCacheCommand extends Command
 {
     protected $description = 'Flushes the response cache';

@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace Matchory\ResponseCache\Facades;
 
 use Illuminate\Support\Facades\Facade;
+use Matchory\ResponseCache\ResponseCache as Instance;
 
 /**
  * Response Cache Facade
@@ -20,13 +21,13 @@ use Illuminate\Support\Facades\Facade;
  * @method static void delete(array|string $uri, array|null $tags = null) Deletes one or more URIs
  * @method static bool enabled() Checks whether the cache is enabled
  *
- * @package Matchory\ResponseCache
- * @see     \Matchory\ResponseCache\ResponseCache
+ * @bundle Matchory\ResponseCache
+ * @see    Instance
  */
 class ResponseCache extends Facade
 {
     protected static function getFacadeAccessor(): string
     {
-        return \Matchory\ResponseCache\ResponseCache::class;
+        return Instance::class;
     }
 }

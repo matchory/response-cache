@@ -26,7 +26,7 @@ use function config;
 /**
  * Response Cache Provider
  *
- * @package Matchory\ResponseCache
+ * @bundle Matchory\ResponseCache
  */
 class ResponseCacheProvider extends ServiceProvider
 {

@@ -86,10 +86,8 @@ class ResponseCache
      * @throws BadMethodCallException
      * @throws InvalidArgumentException
      */
-    public function get(
-        Request $request,
-        array|null $tags = null
-    ): Response|null {
+    public function get(Request $request, array|null $tags = null): Response|null
+    {
         $key = $this->strategy->key($request);
         $tags = $this->resolveTags($tags, $request);
 

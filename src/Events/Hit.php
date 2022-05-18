@@ -14,12 +14,16 @@ namespace Matchory\ResponseCache\Events;
 use Illuminate\Http\Request;
 use JetBrains\PhpStorm\Pure;
 
+/**
+ * Hit Event
+ *
+ * @bundle Matchory\ResponseCache
+ */
 class Hit
 {
     #[Pure]
-    public function __construct(
-        protected Request $request
-    ) {
+    public function __construct(protected Request $request)
+    {
     }
 
     #[Pure]

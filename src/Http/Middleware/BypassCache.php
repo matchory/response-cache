@@ -21,7 +21,7 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * If added to a route, the response cache will be bypassed.
  *
- * @package Matchory\ResponseCache
+ * @bundle Matchory\ResponseCache
  */
 class BypassCache
 {
