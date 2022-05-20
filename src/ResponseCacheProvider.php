@@ -79,7 +79,7 @@ class ResponseCacheProvider extends ServiceProvider
         $this->app
             ->when(ResponseCache::class)
             ->needs('$configResolver')
-            ->give(fn(Application $app): Config => $app->make(
+            ->give(fn(Application $app) => static fn(): Config => $app->make(
                 'config'
             ));
     }
