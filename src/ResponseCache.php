@@ -44,6 +44,8 @@ class ResponseCache
      */
     protected bool $enabled;
 
+    private Closure $configResolver;
+
     /**
      * Stores resolved tags to speed up repeated queries.
      *
@@ -54,7 +56,7 @@ class ResponseCache
     /**
      * Creates a new response cache instance.
      *
-     * @param Closure       $configResolver
+     * @param callable      $configResolver
      * @param UrlGenerator  $urlGenerator
      * @param Repository    $cache
      * @param CacheStrategy $strategy
@@ -62,11 +64,12 @@ class ResponseCache
      * @internal Should only be invoked by the DI container
      */
     public function __construct(
-        protected Closure $configResolver,
+        callable $configResolver,
         protected UrlGenerator $urlGenerator,
         protected Repository $cache,
         protected CacheStrategy $strategy
     ) {
+        $this->configResolver = $configResolver;
         $this->enabled = $this->config()->get(
             'response-cache.enabled',
             true
