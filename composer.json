@@ -3,12 +3,15 @@
     "description": "A package to add automatic response caching to Laravel APIs.",
     "type": "library",
     "require": {
-        "illuminate/support": "^8.34"
+        "php": ">=8.2",
+        "illuminate/support": "^8.34|^v9.52.4|^v10.2.0"
     },
     "require-dev": {
-        "illuminate/contracts": "^8.34",
-        "orchestra/testbench": "^6.15",
-        "phpunit/phpunit": "^9.5"
+        "illuminate/auth": "^10.2",
+        "illuminate/cache": "^10.2",
+        "illuminate/contracts": "^8.34|^v9.52.4|^v10.2.0",
+        "illuminate/http": "^8.34|^v9.52.4|^10.2",
+        "phpunit/phpunit": "^10.0.14"
     },
     "autoload": {
         "psr-4": {
