@@ -11,21 +11,27 @@ declare(strict_types=1);
 namespace Matchory\ResponseCache\Events;
 
 use Illuminate\Http\Request;
-use JetBrains\PhpStorm\Pure;
+use JetBrains\PhpStorm\Deprecated;
 
 /**
  * Miss Event
  *
  * @bundle Matchory\ResponseCache
  */
-class Miss
+readonly class Miss
 {
-    #[Pure]
-    public function __construct(protected Request $request)
+    public function __construct(public Request $request)
     {
     }
 
-    #[Pure]
+    /**
+     * @return Request
+     * @deprecated Use the request property directly
+     */
+    #[Deprecated(
+        reason: "Use the request property directly",
+        replacement: "%class%->request"
+    )]
     public function getRequest(): Request
     {
         return $this->request;

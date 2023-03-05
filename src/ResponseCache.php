@@ -35,16 +35,19 @@ use function substr;
 
 class ResponseCache
 {
-    public const BYPASS_ATTRIBUTE = 'response-cache.bypass';
+    final public const BYPASS_ATTRIBUTE = 'response-cache.bypass';
 
     /**
      * Whether the cache is enabled.
      *
      * @var bool
      */
-    protected bool $enabled;
+    protected readonly bool $enabled;
 
-    private Closure $configResolver;
+    /**
+     * @var Closure(): Config
+     */
+    private readonly Closure $configResolver;
 
     /**
      * Stores resolved tags to speed up repeated queries.
@@ -56,18 +59,18 @@ class ResponseCache
     /**
      * Creates a new response cache instance.
      *
-     * @param callable      $configResolver
-     * @param UrlGenerator  $urlGenerator
-     * @param Repository    $cache
-     * @param CacheStrategy $strategy
+     * @param callable(): Config $configResolver
+     * @param UrlGenerator       $urlGenerator
+     * @param Repository         $cache
+     * @param CacheStrategy      $strategy
      *
      * @internal Should only be invoked by the DI container
      */
     public function __construct(
         callable $configResolver,
-        protected UrlGenerator $urlGenerator,
-        protected Repository $cache,
-        protected CacheStrategy $strategy
+        protected readonly UrlGenerator $urlGenerator,
+        protected readonly Repository $cache,
+        protected readonly CacheStrategy $strategy
     ) {
         $this->configResolver = $configResolver;
         $this->enabled = $this->config()->get(
@@ -143,10 +146,7 @@ class ResponseCache
      */
     public function flush(array|null $tags = null): void
     {
-        $tags = array_merge(
-            $this->getDefaultTags(),
-            $tags ?? [],
-        );
+        $tags = array_merge($this->getDefaultTags(), $tags ?? []);
 
         $this->cache->flush($tags);
     }
@@ -192,10 +192,7 @@ class ResponseCache
 
         // The strategy has ultimate control over whether responses shall be
         // added to the cache
-        if ( ! $this->strategy->shouldCache(
-            $request,
-            $response
-        )) {
+        if ( ! $this->strategy->shouldCache($request, $response)) {
             return;
         }
 
@@ -337,14 +334,14 @@ class ResponseCache
      * Resolves all tags to apply to a given request/response pair, and replaces
      * bound parameters in all cache tags.
      *
+     * @param string[]|null $tags     Individual tags to add to this response.
      * @param Request       $request  Request instance.
      * @param Response|null $response Response instance.
-     * @param string[]      $tags     Individual tags to add to this response.
      *
      * @return string[] List of finalized tags.
      */
     protected function resolveTags(
-        array $tags,
+        array|null $tags,
         Request $request,
         Response|null $response = null
     ): array {

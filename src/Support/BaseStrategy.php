@@ -23,7 +23,7 @@ use function md5;
  *
  * @bundle Matchory\ResponseCache
  */
-class BaseStrategy implements CacheStrategy
+readonly class BaseStrategy implements CacheStrategy
 {
     public function __construct(protected AuthManager $auth)
     {
@@ -68,7 +68,6 @@ class BaseStrategy implements CacheStrategy
      * @param Request $request
      *
      * @return string
-     * @noinspection PhpUndefinedMethodInspection
      * @noinspection PhpUnusedParameterInspection
      */
     protected function buildSuffix(Request $request): string

@@ -14,7 +14,6 @@ use BadMethodCallException;
 use Closure;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Http\Request;
-use JetBrains\PhpStorm\Pure;
 use Matchory\ResponseCache\Events\Hit;
 use Matchory\ResponseCache\Events\Miss;
 use Matchory\ResponseCache\ResponseCache;
@@ -32,7 +31,7 @@ use function is_numeric;
  *
  * @bundle Matchory\ResponseCache
  */
-class CacheResponse
+readonly class CacheResponse
 {
     /**
      * Creates a new middleware instance.
@@ -42,7 +41,6 @@ class CacheResponse
      *
      * @internal Should only be invoked by the DI container
      */
-    #[Pure]
     public function __construct(
         protected Dispatcher $eventDispatcher,
         protected ResponseCache $responseCache

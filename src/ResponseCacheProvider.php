@@ -13,7 +13,7 @@ namespace Matchory\ResponseCache;
 use Illuminate\Contracts\Cache\Factory;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Contracts\Config\Repository as Config;
-use Illuminate\Foundation\Application;
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
 use LogicException;
 use Matchory\ResponseCache\Commands\FlushCacheCommand;

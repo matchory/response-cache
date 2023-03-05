@@ -13,21 +13,27 @@ declare(strict_types=1);
 
 namespace Matchory\ResponseCache\Events;
 
-use JetBrains\PhpStorm\Pure;
+use JetBrains\PhpStorm\Deprecated;
 
 /**
  * Flush Event
  *
  * @bundle Matchory\ResponseCache
  */
-class Flush
+readonly class Flush
 {
-    #[Pure]
-    public function __construct(protected array|null $tags = null)
+    public function __construct(public array|null $tags = null)
     {
     }
 
-    #[Pure]
+    /**
+     * @return array|null
+     * @deprecated Use the tags property directly
+     */
+    #[Deprecated(
+        reason: "Use the tags property directly",
+        replacement: "%class%->tags"
+    )]
     public function getTags(): array|null
     {
         return $this->tags;

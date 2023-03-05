@@ -14,7 +14,6 @@ use BadMethodCallException;
 use Illuminate\Cache\TaggableStore;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Contracts\Events\Dispatcher;
-use JetBrains\PhpStorm\Pure;
 use Matchory\ResponseCache\Events\Flush;
 use Psr\SimpleCache\InvalidArgumentException;
 use Symfony\Component\HttpFoundation\Response;
@@ -26,9 +25,8 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * @bundle Matchory\ResponseCache
  */
-class Repository
+readonly class Repository
 {
-    #[Pure]
     public function __construct(
         protected CacheRepository $store,
         protected Dispatcher $eventDispatcher

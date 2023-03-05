@@ -22,7 +22,7 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * @bundle Matchory\ResponseCache
  */
-class BypassCache
+readonly class BypassCache
 {
     /**
      * @param Request $request
