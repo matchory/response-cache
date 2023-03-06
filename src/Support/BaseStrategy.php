@@ -23,9 +23,9 @@ use function md5;
  *
  * @bundle Matchory\ResponseCache
  */
-readonly class BaseStrategy implements CacheStrategy
+class BaseStrategy implements CacheStrategy
 {
-    public function __construct(protected AuthManager $auth)
+    public function __construct(protected readonly AuthManager $auth)
     {
     }
 
