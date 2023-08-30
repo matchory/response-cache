@@ -20,19 +20,25 @@ use Matchory\ResponseCache\Repository;
  *
  * @bundle Matchory\ResponseCache
  */
-class FlushCacheCommand extends Command
+class ClearCacheCommand extends Command
 {
-    protected $description = 'Flushes the response cache';
+    protected $description = 'Clears the response cache';
 
-    protected $signature = 'response-cache:flush {tags?* : Tags to flush}';
+    protected $signature = 'response-cache:clear {tags?* : Tags to flush}';
+
+    protected $aliases = ['response-cache:flush'];
 
     /**
      * @param Repository $repository
      *
      * @throws BadMethodCallException
      */
-    public function handle(Repository $repository): void
+    public function handle(Repository $repository): int
     {
         $repository->flush($this->argument('tags'));
+
+        $this->components->info('Response cache flushed successfully.');
+
+        return self::SUCCESS;
     }
 }

@@ -16,7 +16,7 @@ use Illuminate\Contracts\Config\Repository as Config;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
 use LogicException;
-use Matchory\ResponseCache\Commands\FlushCacheCommand;
+use Matchory\ResponseCache\Commands\ClearCacheCommand;
 use Matchory\ResponseCache\Contracts\CacheStrategy;
 use Matchory\ResponseCache\Support\BaseStrategy;
 
@@ -91,7 +91,7 @@ class ResponseCacheProvider extends ServiceProvider
         }
 
         $this->commands([
-            FlushCacheCommand::class,
+            ClearCacheCommand::class,
         ]);
     }
 
