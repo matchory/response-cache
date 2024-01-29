@@ -15,29 +15,33 @@ declare(strict_types=1);
 namespace Matchory\ResponseCache\Tests\Support;
 
 use Illuminate\Auth\AuthManager;
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Http\Request;
 use Matchory\ResponseCache\Support\BaseStrategy;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\ExpectationFailedException;
 use PHPUnit\Framework\InvalidArgumentException;
 use PHPUnit\Framework\MockObject\CannotUseAddMethodsException;
-use PHPUnit\Framework\MockObject\ClassAlreadyExistsException;
-use PHPUnit\Framework\MockObject\ClassIsEnumerationException;
-use PHPUnit\Framework\MockObject\ClassIsFinalException;
-use PHPUnit\Framework\MockObject\ClassIsReadonlyException;
-use PHPUnit\Framework\MockObject\DuplicateMethodException;
+use PHPUnit\Framework\MockObject\Generator\ClassAlreadyExistsException;
+use PHPUnit\Framework\MockObject\Generator\ClassIsEnumerationException;
+use PHPUnit\Framework\MockObject\Generator\ClassIsFinalException;
+use PHPUnit\Framework\MockObject\Generator\ClassIsReadonlyException;
+use PHPUnit\Framework\MockObject\Generator\DuplicateMethodException;
+use PHPUnit\Framework\MockObject\Generator\InvalidMethodNameException;
+use PHPUnit\Framework\MockObject\Generator\OriginalConstructorInvocationRequiredException;
+use PHPUnit\Framework\MockObject\Generator\ReflectionException;
+use PHPUnit\Framework\MockObject\Generator\RuntimeException;
+use PHPUnit\Framework\MockObject\Generator\UnknownTypeException;
 use PHPUnit\Framework\MockObject\IncompatibleReturnValueException;
-use PHPUnit\Framework\MockObject\InvalidMethodNameException;
 use PHPUnit\Framework\MockObject\MethodCannotBeConfiguredException;
 use PHPUnit\Framework\MockObject\MethodNameAlreadyConfiguredException;
-use PHPUnit\Framework\MockObject\OriginalConstructorInvocationRequiredException;
-use PHPUnit\Framework\MockObject\ReflectionException;
-use PHPUnit\Framework\MockObject\RuntimeException;
-use PHPUnit\Framework\MockObject\UnknownTypeException;
 use PHPUnit\Framework\TestCase;
 
+#[CoversClass(BaseStrategy::class)]
 class BaseStrategyTest extends TestCase
 {
     /**
+     * @throws ExpectationFailedException
      * @throws InvalidArgumentException
      * @throws ClassAlreadyExistsException
      * @throws ClassIsEnumerationException
@@ -49,7 +53,6 @@ class BaseStrategyTest extends TestCase
      * @throws ReflectionException
      * @throws RuntimeException
      * @throws UnknownTypeException
-     * @throws ExpectationFailedException
      */
     public function testResolvesKey(): void
     {
@@ -126,25 +129,25 @@ class BaseStrategyTest extends TestCase
      * @throws ReflectionException
      * @throws RuntimeException
      * @throws UnknownTypeException
-     * @throws IncompatibleReturnValueException
-     * @throws MethodCannotBeConfiguredException
-     * @throws MethodNameAlreadyConfiguredException
-     * @throws CannotUseAddMethodsException
      */
     public function testResolvesKeyWithAuthIdentifierIfAuthenticated(): void
     {
-        $auth = $this
-            ->getMockBuilder(AuthManager::class)
-            ->addMethods(['check', 'id'])
+        $app = $this->getMockBuilder(Application::class)
             ->disableOriginalConstructor()
             ->getMock();
-        $auth->expects($this->once())
-             ->method('check')
-             ->willReturn(true);
-        $auth->expects($this->once())
-             ->method('id')
-             ->willReturn('49f91eb0-180f-46d2-899d-2046ad1ddda3');
-        $strategy = new BaseStrategy($auth);
+        $strategy = new BaseStrategy(
+            new class($app) extends AuthManager {
+                public function check(): bool
+                {
+                    return true;
+                }
+
+                public function id(): string
+                {
+                    return '49f91eb0-180f-46d2-899d-2046ad1ddda3';
+                }
+            }
+        );
         $key = $strategy->key(Request::create('/'));
 
         self::assertSame('79d8c3591a0419c04e74600696090ee7', $key);
@@ -170,18 +173,22 @@ class BaseStrategyTest extends TestCase
      */
     public function testResolvesKeyWithIntegerAuthIdentifierIfAuthenticated(): void
     {
-        $auth = $this
-            ->getMockBuilder(AuthManager::class)
-            ->addMethods(['check', 'id'])
+        $app = $this->getMockBuilder(Application::class)
             ->disableOriginalConstructor()
             ->getMock();
-        $auth->expects($this->once())
-             ->method('check')
-             ->willReturn(true);
-        $auth->expects($this->once())
-             ->method('id')
-             ->willReturn(42);
-        $strategy = new BaseStrategy($auth);
+        $strategy = new BaseStrategy(
+            new class($app) extends AuthManager {
+                public function check(): bool
+                {
+                    return true;
+                }
+
+                public function id(): int
+                {
+                    return 42;
+                }
+            }
+        );
         $key = $strategy->key(Request::create('/'));
 
         self::assertSame('9350d47085691dcd1698e672fb894b45', $key);

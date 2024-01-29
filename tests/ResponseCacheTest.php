@@ -26,36 +26,40 @@ use Illuminate\Http\Response;
 use Matchory\ResponseCache\Repository;
 use Matchory\ResponseCache\ResponseCache;
 use Matchory\ResponseCache\Support\BaseStrategy;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\ExpectationFailedException;
 use PHPUnit\Framework\InvalidArgumentException;
-use PHPUnit\Framework\MockObject\ClassAlreadyExistsException;
-use PHPUnit\Framework\MockObject\ClassIsEnumerationException;
-use PHPUnit\Framework\MockObject\ClassIsFinalException;
-use PHPUnit\Framework\MockObject\ClassIsReadonlyException;
-use PHPUnit\Framework\MockObject\DuplicateMethodException;
-use PHPUnit\Framework\MockObject\InvalidMethodNameException;
-use PHPUnit\Framework\MockObject\OriginalConstructorInvocationRequiredException;
-use PHPUnit\Framework\MockObject\ReflectionException;
-use PHPUnit\Framework\MockObject\RuntimeException;
-use PHPUnit\Framework\MockObject\UnknownTypeException;
+use PHPUnit\Framework\MockObject\Generator\ClassAlreadyExistsException;
+use PHPUnit\Framework\MockObject\Generator\ClassIsEnumerationException;
+use PHPUnit\Framework\MockObject\Generator\ClassIsFinalException;
+use PHPUnit\Framework\MockObject\Generator\ClassIsReadonlyException;
+use PHPUnit\Framework\MockObject\Generator\DuplicateMethodException;
+use PHPUnit\Framework\MockObject\Generator\InvalidMethodNameException;
+use PHPUnit\Framework\MockObject\Generator\OriginalConstructorInvocationRequiredException;
+use PHPUnit\Framework\MockObject\Generator\ReflectionException;
+use PHPUnit\Framework\MockObject\Generator\RuntimeException;
+use PHPUnit\Framework\MockObject\Generator\UnknownTypeException;
 use PHPUnit\Framework\TestCase;
 
+#[CoversClass(ResponseCache::class)]
 class ResponseCacheTest extends TestCase
 {
     /**
      * @throws BadMethodCallException
+     * @throws ExpectationFailedException
+     * @throws InvalidArgumentException
+     * @throws ReflectionException
+     * @throws RuntimeException
      * @throws ClassAlreadyExistsException
      * @throws ClassIsEnumerationException
      * @throws ClassIsFinalException
      * @throws ClassIsReadonlyException
      * @throws DuplicateMethodException
-     * @throws InvalidArgumentException
      * @throws InvalidMethodNameException
      * @throws OriginalConstructorInvocationRequiredException
      * @throws ReflectionException
      * @throws RuntimeException
      * @throws UnknownTypeException
-     * @throws ExpectationFailedException
      * @throws \Psr\SimpleCache\InvalidArgumentException
      */
     public function testCachesResponses(): void
@@ -91,12 +95,12 @@ class ResponseCacheTest extends TestCase
      * @param array<string, mixed>|null $values
      *
      * @return callable(): Config
+     * @throws InvalidArgumentException
      * @throws ClassAlreadyExistsException
      * @throws ClassIsEnumerationException
      * @throws ClassIsFinalException
      * @throws ClassIsReadonlyException
      * @throws DuplicateMethodException
-     * @throws InvalidArgumentException
      * @throws InvalidMethodNameException
      * @throws OriginalConstructorInvocationRequiredException
      * @throws ReflectionException
