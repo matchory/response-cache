@@ -24,11 +24,12 @@ use Symfony\Component\Console\Attribute\AsCommand;
 #[AsCommand(
     name: 'response-cache:clear',
     description: 'Clears the response cache',
-    aliases: ['response-cache:flush']
 )]
 class ClearCacheCommand extends Command
 {
     protected $signature = 'response-cache:clear {tags?* : Tags to flush}';
+
+    protected $aliases = ['response-cache:flush'];
 
     /**
      * @param Repository $repository
