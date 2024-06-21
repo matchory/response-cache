@@ -14,19 +14,21 @@ namespace Matchory\ResponseCache\Commands;
 use BadMethodCallException;
 use Illuminate\Console\Command;
 use Matchory\ResponseCache\Repository;
+use Symfony\Component\Console\Attribute\AsCommand;
 
 /**
  * FlushCacheCommand
  *
  * @bundle Matchory\ResponseCache
  */
+#[AsCommand(
+    name: 'response-cache:clear',
+    description: 'Clears the response cache',
+    aliases: ['response-cache:flush']
+)]
 class ClearCacheCommand extends Command
 {
-    protected $description = 'Clears the response cache';
-
     protected $signature = 'response-cache:clear {tags?* : Tags to flush}';
-
-    protected $aliases = ['response-cache:flush'];
 
     /**
      * @param Repository $repository

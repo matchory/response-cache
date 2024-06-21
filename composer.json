@@ -4,14 +4,14 @@
     "type": "library",
     "require": {
         "php": ">=8.2",
-        "illuminate/support": "^8.34|^v9.52.4|^v10.2.0"
+        "illuminate/support": "^v10.48|^11.11"
     },
     "require-dev": {
-        "illuminate/auth": "^10.2",
-        "illuminate/cache": "^10.2",
-        "illuminate/contracts": "^8.34|^v9.52.4|^v10.2.0",
-        "illuminate/http": "^8.34|^v9.52.4|^10.2",
-        "phpunit/phpunit": "^10.0.14"
+        "illuminate/auth": "^v10.48|^11.11",
+        "illuminate/cache": "^v10.48|^11.11",
+        "illuminate/contracts":"^v10.48|^11.11",
+        "illuminate/http": "^v10.48|^11.11",
+        "phpunit/phpunit": "^10.5|^11.2"
     },
     "autoload": {
         "psr-4": {
