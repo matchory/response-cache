@@ -74,12 +74,13 @@ readonly class CacheResponse
             : null;
         $tags = $args;
 
-        if ($this->responseCache->has($request, $tags)) {
-            $this->eventDispatcher->dispatch(new Hit(
-                $request
-            ));
+        if (
+            $this->responseCache->has($request, $tags) &&
+            ($response = $this->responseCache->get($request, $tags)) !== null
+        ) {
+            $this->eventDispatcher->dispatch(new Hit($request));
 
-            return $this->responseCache->get($request, $tags);
+            return $response;
         }
 
         $response = $next($request);
