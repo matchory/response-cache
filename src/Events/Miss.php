@@ -20,17 +20,14 @@ use JetBrains\PhpStorm\Deprecated;
  */
 readonly class Miss
 {
-    public function __construct(public Request $request)
-    {
-    }
+    public function __construct(public Request $request) {}
 
     /**
-     * @return Request
      * @deprecated Use the request property directly
      */
     #[Deprecated(
-        reason: "Use the request property directly",
-        replacement: "%class%->request"
+        reason: 'Use the request property directly',
+        replacement: '%class%->request',
     )]
     public function getRequest(): Request
     {

@@ -31,8 +31,6 @@ class ResponseCacheProvider extends ServiceProvider
 {
     /**
      * Bootstrap any application services.
-     *
-     * @return void
      */
     public function boot(): void
     {
@@ -42,7 +40,6 @@ class ResponseCacheProvider extends ServiceProvider
     /**
      * Register any application services.
      *
-     * @return void
      * @throws LogicException
      */
     public function register(): void
@@ -57,7 +54,7 @@ class ResponseCacheProvider extends ServiceProvider
     {
         $this->mergeConfigFrom(
             __DIR__ . '/../config/response-cache.php',
-            'response-cache'
+            'response-cache',
         );
 
         $this->publishes([
@@ -80,13 +77,13 @@ class ResponseCacheProvider extends ServiceProvider
             ->when(ResponseCache::class)
             ->needs('$configResolver')
             ->give(fn(Application $app) => static fn(): Config => $app->make(
-                'config'
+                'config',
             ));
     }
 
     protected function registerCommands(): void
     {
-        if ( ! $this->app->runningInConsole()) {
+        if (! $this->app->runningInConsole()) {
             return;
         }
 
@@ -102,11 +99,11 @@ class ResponseCacheProvider extends ServiceProvider
     {
         $this->app->bind(
             CacheStrategy::class,
-            BaseStrategy::class
+            BaseStrategy::class,
         );
         $this->app->alias(
             CacheStrategy::class,
-            'response-cache.strategy'
+            'response-cache.strategy',
         );
     }
 
@@ -118,15 +115,16 @@ class ResponseCacheProvider extends ServiceProvider
         $this->app
             ->when(Repository::class)
             ->needs(CacheRepository::class)
-            ->give(fn() => $this->app
+            ->give(
+                fn() => $this->app
                 ->make(Factory::class)
-                ->store(config('response-cache.store'))
+                ->store(config('response-cache.store')),
             );
 
         $this->app->bind(Repository::class);
         $this->app->alias(
             Repository::class,
-            'response-cache.repository'
+            'response-cache.repository',
         );
     }
 }

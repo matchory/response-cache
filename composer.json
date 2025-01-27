@@ -4,14 +4,17 @@
     "type": "library",
     "require": {
         "php": ">=8.2",
-        "illuminate/support": "^v10.48|^11.11"
+        "illuminate/support": "^v10.48.27|^11.40.0"
     },
     "require-dev": {
-        "illuminate/auth": "^v10.48|^11.11",
-        "illuminate/cache": "^v10.48|^11.11",
-        "illuminate/contracts":"^v10.48|^11.11",
-        "illuminate/http": "^v10.48|^11.11",
-        "phpunit/phpunit": "^10.5|^11.2"
+        "illuminate/auth": "^v10.48.27|^11.40.0",
+        "illuminate/cache": "^v10.48.27|^11.40.0",
+        "illuminate/contracts": "^v10.48.27|^v11.40.0",
+        "illuminate/http": "^v10.48.27|^v11.40.0",
+        "orchestra/testbench": "^9.9",
+        "pestphp/pest": "^3.7",
+        "pestphp/pest-plugin-laravel": "^3.1",
+        "phpunit/phpunit": "^10.5.41|^11.5.3"
     },
     "autoload": {
         "psr-4": {
@@ -35,7 +38,10 @@
         }
     },
     "config": {
-        "sort-packages": true
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
     },
     "license": "MIT",
     "authors": [

@@ -50,7 +50,7 @@ return [
     |
     */
     'tags' => ($tags = env('RESPONSE_CACHE_TAGS'))
-        ? explode(',', (string)$tags)
+        ? explode(',', (string) $tags)
         : [],
 
     /*

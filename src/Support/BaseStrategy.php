@@ -12,7 +12,6 @@ namespace Matchory\ResponseCache\Support;
 
 use Illuminate\Auth\AuthManager;
 use Illuminate\Http\Request;
-use JetBrains\PhpStorm\Pure;
 use Matchory\ResponseCache\Contracts\CacheStrategy;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -25,12 +24,10 @@ use function md5;
  */
 class BaseStrategy implements CacheStrategy
 {
-    public function __construct(protected readonly AuthManager $auth)
-    {
-    }
+    public function __construct(protected readonly AuthManager $auth) {}
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public function key(Request $request): string
     {
@@ -41,11 +38,11 @@ class BaseStrategy implements CacheStrategy
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public function shouldCache(Request $request, Response $response): bool
     {
-        if ( ! $this->isMethodCachable($request)) {
+        if (! $this->isMethodCachable($request)) {
             return false;
         }
 
@@ -53,9 +50,8 @@ class BaseStrategy implements CacheStrategy
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
-    #[Pure]
     public function tags(Request $request, Response|null $response = null): array
     {
         return [];
@@ -65,15 +61,12 @@ class BaseStrategy implements CacheStrategy
      * Retrieves a suffix to append to the key before it is hashed. This allows
      * to constrain the cache key to the authenticated user, for example.
      *
-     * @param Request $request
-     *
-     * @return string
      * @noinspection PhpUnusedParameterInspection
      */
     protected function buildSuffix(Request $request): string
     {
         return $this->auth->check()
-            ? (string)$this->auth->id()
+            ? (string) $this->auth->id()
             : '';
     }
 
@@ -81,8 +74,7 @@ class BaseStrategy implements CacheStrategy
      * Extracts a unique identifier from a request. The default implementation
      * will use the full URL as provided by Laravel.
      *
-     * @param Request $request Current request instance.
-     *
+     * @param  Request  $request  Current request instance.
      * @return string Unique request identifier.
      */
     protected function extractRequestIdentifier(Request $request): string
@@ -93,12 +85,7 @@ class BaseStrategy implements CacheStrategy
     /**
      * Hashes the cache key. The default implementation will return an MD5 hash
      * of the given key.
-     *
-     * @param string $key
-     *
-     * @return string
      */
-    #[Pure]
     protected function hash(string $key): string
     {
         return md5($key);
@@ -107,8 +94,7 @@ class BaseStrategy implements CacheStrategy
     /**
      * Checks whether the request method if a request is safe to cache.
      *
-     * @param Request $request Request instance.
-     *
+     * @param  Request  $request  Request instance.
      * @return bool Whether the method is safe to cache.
      */
     protected function isMethodCachable(Request $request): bool
@@ -120,11 +106,9 @@ class BaseStrategy implements CacheStrategy
      * Checks whether a response is successful. The default implementation will
      * succeed if the status code is in the 2xx-3xx range.
      *
-     * @param Response $response Response instance.
-     *
+     * @param  Response  $response  Response instance.
      * @return bool Whether the response is successful
      */
-    #[Pure]
     protected function isSuccessful(Response $response): bool
     {
         return $response->isSuccessful() || $response->isRedirection();

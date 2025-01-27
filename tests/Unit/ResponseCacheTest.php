@@ -12,7 +12,7 @@
 
 declare(strict_types=1);
 
-namespace Matchory\ResponseCache\Tests;
+namespace Matchory\ResponseCache\Tests\Unit;
 
 use BadMethodCallException;
 use Illuminate\Auth\AuthManager;
@@ -27,59 +27,44 @@ use Matchory\ResponseCache\Repository;
 use Matchory\ResponseCache\ResponseCache;
 use Matchory\ResponseCache\Support\BaseStrategy;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\ExpectationFailedException;
 use PHPUnit\Framework\InvalidArgumentException;
-use PHPUnit\Framework\MockObject\Generator\ClassAlreadyExistsException;
 use PHPUnit\Framework\MockObject\Generator\ClassIsEnumerationException;
 use PHPUnit\Framework\MockObject\Generator\ClassIsFinalException;
-use PHPUnit\Framework\MockObject\Generator\ClassIsReadonlyException;
 use PHPUnit\Framework\MockObject\Generator\DuplicateMethodException;
 use PHPUnit\Framework\MockObject\Generator\InvalidMethodNameException;
+use PHPUnit\Framework\MockObject\Generator\NameAlreadyInUseException;
 use PHPUnit\Framework\MockObject\Generator\OriginalConstructorInvocationRequiredException;
 use PHPUnit\Framework\MockObject\Generator\ReflectionException;
 use PHPUnit\Framework\MockObject\Generator\RuntimeException;
 use PHPUnit\Framework\MockObject\Generator\UnknownTypeException;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\HttpFoundation\Exception\BadRequestException;
 
 #[CoversClass(ResponseCache::class)]
 class ResponseCacheTest extends TestCase
 {
     /**
      * @throws BadMethodCallException
-     * @throws ExpectationFailedException
-     * @throws InvalidArgumentException
-     * @throws ReflectionException
-     * @throws RuntimeException
-     * @throws ClassAlreadyExistsException
      * @throws ClassIsEnumerationException
      * @throws ClassIsFinalException
-     * @throws ClassIsReadonlyException
      * @throws DuplicateMethodException
+     * @throws ExpectationFailedException
+     * @throws InvalidArgumentException
      * @throws InvalidMethodNameException
+     * @throws NameAlreadyInUseException
      * @throws OriginalConstructorInvocationRequiredException
      * @throws ReflectionException
      * @throws RuntimeException
      * @throws UnknownTypeException
      * @throws \Psr\SimpleCache\InvalidArgumentException
+     * @throws BadRequestException
      */
-    public function testCachesResponses(): void
+    #[Test]
+    public function cachesResponses(): void
     {
-        $configResolver = $this->createConfigResolver([
-            'response-cache.enabled' => true,
-            'response-cache.ttl' => 42,
-        ]);
-        $urlGenerator = $this
-            ->getMockBuilder(UrlGenerator::class)
-            ->getMock();
-        $cache = $this->createRepository();
-        $strategy = $this->createStrategy();
-        $responseCache = new ResponseCache(
-            $configResolver,
-            $urlGenerator,
-            $cache,
-            $strategy,
-        );
-
+        $responseCache = $this->createResponseCache();
         $response = new Response('foo');
 
         self::assertFalse($responseCache->has(Request::create('/')));
@@ -87,25 +72,57 @@ class ResponseCacheTest extends TestCase
         self::assertTrue($responseCache->has(Request::create('/')));
         self::assertSame(
             $response,
-            $responseCache->get(Request::create('/'))
+            $responseCache->get(Request::create('/')),
         );
     }
 
     /**
-     * @param array<string, mixed>|null $values
-     *
-     * @return callable(): Config
-     * @throws InvalidArgumentException
-     * @throws ClassAlreadyExistsException
+     * @throws BadMethodCallException
+     * @throws BadRequestException
      * @throws ClassIsEnumerationException
      * @throws ClassIsFinalException
-     * @throws ClassIsReadonlyException
      * @throws DuplicateMethodException
+     * @throws ExpectationFailedException
+     * @throws InvalidArgumentException
+     * @throws InvalidMethodNameException
+     * @throws NameAlreadyInUseException
+     * @throws OriginalConstructorInvocationRequiredException
+     * @throws ReflectionException
+     * @throws RuntimeException
+     * @throws UnknownTypeException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
+    #[Test]
+    public function addsStatusHeader(): void
+    {
+        $responseCache = $this->createResponseCache([
+            'response-cache.cache_status_enabled' => true,
+        ]);
+        $responseCache->put(Request::create('/'), new Response('foo'));
+
+        self::assertSame(
+            'hit',
+            $responseCache
+                ->get(Request::create('/'))
+                ->headers
+                ->get('Response-Cache-Status'),
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $values
+     * @return callable(): Config
+     *
+     * @throws ClassIsEnumerationException
+     * @throws ClassIsFinalException
+     * @throws DuplicateMethodException
+     * @throws InvalidArgumentException
      * @throws InvalidMethodNameException
      * @throws OriginalConstructorInvocationRequiredException
      * @throws ReflectionException
      * @throws RuntimeException
      * @throws UnknownTypeException
+     * @throws NameAlreadyInUseException
      */
     private function createConfigResolver(array|null $values = null): callable
     {
@@ -113,21 +130,19 @@ class ResponseCacheTest extends TestCase
             ->getMockBuilder(Config::class)
             ->getMock();
         $config->method('get')->willReturnCallback(
-            fn(string $key, mixed $default = null) => $values[$key] ?? $default
+            fn(string $key, mixed $default = null) => $values[$key] ?? $default,
         );
 
         return static fn(): Config => $config;
     }
 
     /**
-     * @return Repository
-     * @throws ClassAlreadyExistsException
      * @throws ClassIsEnumerationException
      * @throws ClassIsFinalException
-     * @throws ClassIsReadonlyException
      * @throws DuplicateMethodException
      * @throws InvalidArgumentException
      * @throws InvalidMethodNameException
+     * @throws NameAlreadyInUseException
      * @throws OriginalConstructorInvocationRequiredException
      * @throws ReflectionException
      * @throws RuntimeException
@@ -142,14 +157,12 @@ class ResponseCacheTest extends TestCase
     }
 
     /**
-     * @return BaseStrategy
-     * @throws ClassAlreadyExistsException
      * @throws ClassIsEnumerationException
      * @throws ClassIsFinalException
-     * @throws ClassIsReadonlyException
      * @throws DuplicateMethodException
      * @throws InvalidArgumentException
      * @throws InvalidMethodNameException
+     * @throws NameAlreadyInUseException
      * @throws OriginalConstructorInvocationRequiredException
      * @throws ReflectionException
      * @throws RuntimeException
@@ -163,5 +176,38 @@ class ResponseCacheTest extends TestCase
             ->getMock();
 
         return new BaseStrategy($auth);
+    }
+
+    /**
+     * @throws ClassIsEnumerationException
+     * @throws ClassIsFinalException
+     * @throws DuplicateMethodException
+     * @throws InvalidArgumentException
+     * @throws InvalidMethodNameException
+     * @throws NameAlreadyInUseException
+     * @throws OriginalConstructorInvocationRequiredException
+     * @throws ReflectionException
+     * @throws RuntimeException
+     * @throws UnknownTypeException
+     */
+    private function createResponseCache(array|null $config = null): ResponseCache
+    {
+        $config ??= [
+            'response-cache.enabled' => true,
+            'response-cache.ttl' => 42,
+        ];
+        $configResolver = $this->createConfigResolver($config);
+        $urlGenerator = $this
+            ->getMockBuilder(UrlGenerator::class)
+            ->getMock();
+        $cache = $this->createRepository();
+        $strategy = $this->createStrategy();
+
+        return new ResponseCache(
+            $configResolver,
+            $urlGenerator,
+            $cache,
+            $strategy,
+        );
     }
 }

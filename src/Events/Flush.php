@@ -22,17 +22,14 @@ use JetBrains\PhpStorm\Deprecated;
  */
 readonly class Flush
 {
-    public function __construct(public array|null $tags = null)
-    {
-    }
+    public function __construct(public array|null $tags = null) {}
 
     /**
-     * @return array|null
      * @deprecated Use the tags property directly
      */
     #[Deprecated(
-        reason: "Use the tags property directly",
-        replacement: "%class%->tags"
+        reason: 'Use the tags property directly',
+        replacement: '%class%->tags',
     )]
     public function getTags(): array|null
     {

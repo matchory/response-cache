@@ -12,7 +12,7 @@
 
 declare(strict_types=1);
 
-namespace Matchory\ResponseCache\Tests\Support;
+namespace Matchory\ResponseCache\Tests\Unit\Support;
 
 use Illuminate\Auth\AuthManager;
 use Illuminate\Contracts\Foundation\Application;
@@ -21,34 +21,30 @@ use Matchory\ResponseCache\Support\BaseStrategy;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\ExpectationFailedException;
 use PHPUnit\Framework\InvalidArgumentException;
-use PHPUnit\Framework\MockObject\CannotUseAddMethodsException;
-use PHPUnit\Framework\MockObject\Generator\ClassAlreadyExistsException;
 use PHPUnit\Framework\MockObject\Generator\ClassIsEnumerationException;
 use PHPUnit\Framework\MockObject\Generator\ClassIsFinalException;
-use PHPUnit\Framework\MockObject\Generator\ClassIsReadonlyException;
 use PHPUnit\Framework\MockObject\Generator\DuplicateMethodException;
 use PHPUnit\Framework\MockObject\Generator\InvalidMethodNameException;
+use PHPUnit\Framework\MockObject\Generator\NameAlreadyInUseException;
 use PHPUnit\Framework\MockObject\Generator\OriginalConstructorInvocationRequiredException;
 use PHPUnit\Framework\MockObject\Generator\ReflectionException;
 use PHPUnit\Framework\MockObject\Generator\RuntimeException;
 use PHPUnit\Framework\MockObject\Generator\UnknownTypeException;
-use PHPUnit\Framework\MockObject\IncompatibleReturnValueException;
-use PHPUnit\Framework\MockObject\MethodCannotBeConfiguredException;
-use PHPUnit\Framework\MockObject\MethodNameAlreadyConfiguredException;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\HttpFoundation\Exception\BadRequestException;
 
 #[CoversClass(BaseStrategy::class)]
 class BaseStrategyTest extends TestCase
 {
     /**
-     * @throws ExpectationFailedException
-     * @throws InvalidArgumentException
-     * @throws ClassAlreadyExistsException
+     * @throws BadRequestException
      * @throws ClassIsEnumerationException
      * @throws ClassIsFinalException
-     * @throws ClassIsReadonlyException
      * @throws DuplicateMethodException
+     * @throws ExpectationFailedException
+     * @throws InvalidArgumentException
      * @throws InvalidMethodNameException
+     * @throws NameAlreadyInUseException
      * @throws OriginalConstructorInvocationRequiredException
      * @throws ReflectionException
      * @throws RuntimeException
@@ -66,18 +62,18 @@ class BaseStrategyTest extends TestCase
     }
 
     /**
-     * @throws InvalidArgumentException
-     * @throws ClassAlreadyExistsException
+     * @throws BadRequestException
      * @throws ClassIsEnumerationException
      * @throws ClassIsFinalException
-     * @throws ClassIsReadonlyException
      * @throws DuplicateMethodException
+     * @throws ExpectationFailedException
+     * @throws InvalidArgumentException
      * @throws InvalidMethodNameException
+     * @throws NameAlreadyInUseException
      * @throws OriginalConstructorInvocationRequiredException
      * @throws ReflectionException
      * @throws RuntimeException
      * @throws UnknownTypeException
-     * @throws ExpectationFailedException
      */
     public function testResolvesKeyForPath(): void
     {
@@ -91,18 +87,18 @@ class BaseStrategyTest extends TestCase
     }
 
     /**
-     * @throws InvalidArgumentException
-     * @throws ClassAlreadyExistsException
      * @throws ClassIsEnumerationException
      * @throws ClassIsFinalException
-     * @throws ClassIsReadonlyException
      * @throws DuplicateMethodException
+     * @throws ExpectationFailedException
+     * @throws InvalidArgumentException
      * @throws InvalidMethodNameException
      * @throws OriginalConstructorInvocationRequiredException
      * @throws ReflectionException
      * @throws RuntimeException
      * @throws UnknownTypeException
-     * @throws ExpectationFailedException
+     * @throws NameAlreadyInUseException
+     * @throws BadRequestException
      */
     public function testResolvesKeyReproducibly(): void
     {
@@ -117,14 +113,14 @@ class BaseStrategyTest extends TestCase
     }
 
     /**
-     * @throws ClassAlreadyExistsException
+     * @throws BadRequestException
      * @throws ClassIsEnumerationException
      * @throws ClassIsFinalException
-     * @throws ClassIsReadonlyException
      * @throws DuplicateMethodException
      * @throws ExpectationFailedException
      * @throws InvalidArgumentException
      * @throws InvalidMethodNameException
+     * @throws NameAlreadyInUseException
      * @throws OriginalConstructorInvocationRequiredException
      * @throws ReflectionException
      * @throws RuntimeException
@@ -136,7 +132,7 @@ class BaseStrategyTest extends TestCase
             ->disableOriginalConstructor()
             ->getMock();
         $strategy = new BaseStrategy(
-            new class($app) extends AuthManager {
+            new class ($app) extends AuthManager {
                 public function check(): bool
                 {
                     return true;
@@ -146,7 +142,7 @@ class BaseStrategyTest extends TestCase
                 {
                     return '49f91eb0-180f-46d2-899d-2046ad1ddda3';
                 }
-            }
+            },
         );
         $key = $strategy->key(Request::create('/'));
 
@@ -154,22 +150,18 @@ class BaseStrategyTest extends TestCase
     }
 
     /**
-     * @throws ClassAlreadyExistsException
+     * @throws BadRequestException
      * @throws ClassIsEnumerationException
      * @throws ClassIsFinalException
-     * @throws ClassIsReadonlyException
      * @throws DuplicateMethodException
      * @throws ExpectationFailedException
      * @throws InvalidArgumentException
      * @throws InvalidMethodNameException
+     * @throws NameAlreadyInUseException
      * @throws OriginalConstructorInvocationRequiredException
      * @throws ReflectionException
      * @throws RuntimeException
      * @throws UnknownTypeException
-     * @throws IncompatibleReturnValueException
-     * @throws MethodCannotBeConfiguredException
-     * @throws MethodNameAlreadyConfiguredException
-     * @throws CannotUseAddMethodsException
      */
     public function testResolvesKeyWithIntegerAuthIdentifierIfAuthenticated(): void
     {
@@ -177,7 +169,7 @@ class BaseStrategyTest extends TestCase
             ->disableOriginalConstructor()
             ->getMock();
         $strategy = new BaseStrategy(
-            new class($app) extends AuthManager {
+            new class ($app) extends AuthManager {
                 public function check(): bool
                 {
                     return true;
@@ -187,7 +179,7 @@ class BaseStrategyTest extends TestCase
                 {
                     return 42;
                 }
-            }
+            },
         );
         $key = $strategy->key(Request::create('/'));
 

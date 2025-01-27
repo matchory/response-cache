@@ -22,20 +22,11 @@ interface CacheStrategy
 {
     /**
      * Generates a unique key for a request.
-     *
-     * @param Request $request
-     *
-     * @return string
      */
     public function key(Request $request): string;
 
     /**
      * Determines whether the response should be cached.
-     *
-     * @param Request  $request
-     * @param Response $response
-     *
-     * @return bool
      */
     public function shouldCache(Request $request, Response $response): bool;
 
@@ -44,9 +35,6 @@ interface CacheStrategy
      * method will be invoked with the generated response passed, providing an
      * opportunity to add tags dependent on the generated response, for example
      * the ID of a customer associated to the request, or similar.
-     *
-     * @param Request       $request
-     * @param Response|null $response
      *
      * @return string[]
      */

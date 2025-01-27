@@ -36,41 +36,32 @@ readonly class CacheResponse
     /**
      * Creates a new middleware instance.
      *
-     * @param Dispatcher    $eventDispatcher
-     * @param ResponseCache $responseCache
-     *
      * @internal Should only be invoked by the DI container
      */
     public function __construct(
         protected Dispatcher $eventDispatcher,
-        protected ResponseCache $responseCache
-    ) {
-    }
+        protected ResponseCache $responseCache,
+    ) {}
 
     /**
      * Handles requests.
      *
-     * @param Request $request
-     * @param Closure $next
-     * @param string  ...$args
-     *
-     * @return Response
      * @throws BadMethodCallException
      * @throws InvalidArgumentException
      */
     public function handle(
         Request $request,
         Closure $next,
-        string ...$args
+        string ...$args,
     ): Response {
-        if ( ! $this->responseCache->enabled()) {
+        if (! $this->responseCache->enabled()) {
             return $next($request);
         }
 
         // If the first value passed to the middleware is a number, we'll use it
         // as the TTL. Everything subsequent parameter is interpreted as a tag.
         $ttl = isset($args[0]) && is_numeric($args[0])
-            ? (int)array_shift($args)
+            ? (int) array_shift($args)
             : null;
         $tags = $args;
 
@@ -91,7 +82,7 @@ readonly class CacheResponse
             $request,
             clone $response,
             $tags,
-            $ttl
+            $ttl,
         );
 
         return $response;

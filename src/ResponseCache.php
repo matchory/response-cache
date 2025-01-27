@@ -18,7 +18,6 @@ use Illuminate\Contracts\Routing\UrlRoutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
-use JetBrains\PhpStorm\Pure;
 use Matchory\ResponseCache\Contracts\CacheStrategy;
 use Psr\SimpleCache\InvalidArgumentException;
 use Stringable;
@@ -39,8 +38,6 @@ class ResponseCache
 
     /**
      * Whether the cache is enabled.
-     *
-     * @var bool
      */
     protected readonly bool $enabled;
 
@@ -59,10 +56,7 @@ class ResponseCache
     /**
      * Creates a new response cache instance.
      *
-     * @param callable(): Config $configResolver
-     * @param UrlGenerator       $urlGenerator
-     * @param Repository         $cache
-     * @param CacheStrategy      $strategy
+     * @param  callable(): Config  $configResolver
      *
      * @internal Should only be invoked by the DI container
      */
@@ -70,12 +64,12 @@ class ResponseCache
         callable $configResolver,
         protected readonly UrlGenerator $urlGenerator,
         protected readonly Repository $cache,
-        protected readonly CacheStrategy $strategy
+        protected readonly CacheStrategy $strategy,
     ) {
         $this->configResolver = $configResolver;
         $this->enabled = $this->config()->get(
             'response-cache.enabled',
-            true
+            true,
         );
     }
 
@@ -83,11 +77,11 @@ class ResponseCache
      * Retrieves a response from the cache. If there is no cached response for
      * the given request, `null` will be returned.
      *
-     * @param Request       $request Request to retrieve a response from the
-     *                               cache for
-     * @param string[]|null $tags    Tags the cache entry is tagged with
-     *
+     * @param  Request  $request  Request to retrieve a response from the
+     *                            cache for
+     * @param  string[]|null  $tags  Tags the cache entry is tagged with
      * @return Response|null Response if cached, `null` otherwise
+     *
      * @throws BadMethodCallException
      * @throws InvalidArgumentException
      */
@@ -103,20 +97,19 @@ class ResponseCache
      * Deletes one or more specific URLs from the cache. Note that this can't
      * take bound parameters or tags specific to request instances into account.
      *
-     * @param string|string[] $uri  URI or URIs to remove from the cache.
-     * @param string[]        $tags Tags to flush the cache for.
+     * @param  string|string[]  $uri  URI or URIs to remove from the cache.
+     * @param  string[]  $tags  Tags to flush the cache for.
      *
      * @throws BadMethodCallException
      * @throws InvalidArgumentException
+     *
+     * @noinspection PhpDocMissingThrowsInspection
      */
     public function delete(array|string $uri, array $tags = []): void
     {
-        $uris = (array)$uri;
-
-        Collection::make($uris)->each(function (
-            string $uri
-        ) use ($tags): void {
+        Collection::wrap($uri)->each(function (string $uri) use ($tags) {
             $url = $this->urlGenerator->to($uri);
+            /** @noinspection PhpUnhandledExceptionInspection */
             $request = Request::create($url);
             $key = $this->strategy->key($request);
 
@@ -131,7 +124,6 @@ class ResponseCache
      *
      * @return bool `true` if it is enabled, `false` otherwise
      */
-    #[Pure]
     public function enabled(): bool
     {
         return $this->enabled;
@@ -140,7 +132,7 @@ class ResponseCache
     /**
      * Flushes all cached items, or all items with one or more tags.
      *
-     * @param string[]|null $tags Tags to flush. Pass `null` to flush all tags.
+     * @param  string[]|null  $tags  Tags to flush. Pass `null` to flush all tags.
      *
      * @throws BadMethodCallException
      */
@@ -154,10 +146,10 @@ class ResponseCache
     /**
      * Checks whether the response for a request has already been cached.
      *
-     * @param Request       $request Request to check the cache status for
-     * @param string[]|null $tags    Tags the cached entry is tagged with
-     *
+     * @param  Request  $request  Request to check the cache status for
+     * @param  string[]|null  $tags  Tags the cached entry is tagged with
      * @return bool `true` if a cached response exists, `false` otherwise
+     *
      * @throws BadMethodCallException
      * @throws InvalidArgumentException
      */
@@ -172,10 +164,10 @@ class ResponseCache
     /**
      * Caches the response to a given request, if it matches the cache strategy.
      *
-     * @param Request       $request  Request to cache a response for
-     * @param Response      $response Response to cache
-     * @param string[]|null $tags     Tags to tag the cache entry with
-     * @param int|null      $ttl      Time-to-live for the cache entry
+     * @param  Request  $request  Request to cache a response for
+     * @param  Response  $response  Response to cache
+     * @param  string[]|null  $tags  Tags to tag the cache entry with
+     * @param  int|null  $ttl  Time-to-live for the cache entry
      *
      * @throws BadMethodCallException
      */
@@ -183,7 +175,7 @@ class ResponseCache
         Request $request,
         Response $response,
         array|null $tags = null,
-        int|null $ttl = null
+        int|null $ttl = null,
     ): void {
         // Escape hatch to bypass caching via middleware
         if ($request->attributes->has(self::BYPASS_ATTRIBUTE)) {
@@ -192,7 +184,7 @@ class ResponseCache
 
         // The strategy has ultimate control over whether responses shall be
         // added to the cache
-        if ( ! $this->strategy->shouldCache($request, $response)) {
+        if (! $this->strategy->shouldCache($request, $response)) {
             return;
         }
 
@@ -201,7 +193,7 @@ class ResponseCache
         $tags = $this->resolveTags(
             $tags,
             $request,
-            $response
+            $response,
         );
 
         $response = $this->addServerTiming($response);
@@ -212,22 +204,25 @@ class ResponseCache
     /**
      * Adds original cache timing information to the response, if enabled.
      *
-     * @param Response $response Response instance to add the information to.
-     *
+     * @param  Response  $response  Response instance to add the information to.
      * @return Response New response instance with the header applied to.
      */
     protected function addServerTiming(Response $response): Response
     {
-        if ( ! $this->config()->get('response-cache.server_timing')) {
+        if (! $this->config()->get('response-cache.server_timing')) {
             return $response;
         }
 
         $cloned = clone $response;
 
-        $cloned->headers->set('Server-Timing', sprintf(
-            'response-cache;desc="%s"',
-            Carbon::now()->toRfc2822String()
-        ));
+        $cloned->headers->set(
+            'Server-Timing',
+            sprintf(
+                'response-cache;desc="%s"',
+                Carbon::now()->toRfc2822String(),
+            ),
+            replace: false,
+        );
 
         return $cloned;
     }
@@ -260,9 +255,8 @@ class ResponseCache
      * Note that, for this to work properly, the cache middleware _must_ run
      * after the SubstituteBindings middleware.
      *
-     * @param string  $tag     Tag to replace bindings in.
-     * @param Request $request Request instance to fetch bound parameters from.
-     *
+     * @param  string  $tag  Tag to replace bindings in.
+     * @param  Request  $request  Request instance to fetch bound parameters from.
      * @return string Finalized tag.
      *
      * @example Assume a tag passed as "users.{user}". The route has an implicit
@@ -282,7 +276,7 @@ class ResponseCache
 
         // If there is no opening curly brace in the tag, there's no need to run
         // a regular expression match
-        if ( ! str_contains($tag, '{')) {
+        if (! str_contains($tag, '{')) {
             return $tag;
         }
 
@@ -290,7 +284,7 @@ class ResponseCache
         // containing all matched bindings
         preg_match_all('/{.+?}/', $tag, $matches);
 
-        if ( ! isset($matches[0])) {
+        if (! isset($matches[0])) {
             return $tag;
         }
 
@@ -300,10 +294,10 @@ class ResponseCache
             $name = substr($match, 1, -1);
 
             $value = $request->route($name)
-                     ?? $request->get($name)
-                        ?? null;
+                ?? $request->get($name)
+                ?? null;
 
-            if ( ! $value) {
+            if (! $value) {
                 continue;
             }
 
@@ -334,16 +328,15 @@ class ResponseCache
      * Resolves all tags to apply to a given request/response pair, and replaces
      * bound parameters in all cache tags.
      *
-     * @param string[]|null $tags     Individual tags to add to this response.
-     * @param Request       $request  Request instance.
-     * @param Response|null $response Response instance.
-     *
+     * @param  string[]|null  $tags  Individual tags to add to this response.
+     * @param  Request  $request  Request instance.
+     * @param  Response|null  $response  Response instance.
      * @return string[] List of finalized tags.
      */
     protected function resolveTags(
         array|null $tags,
         Request $request,
-        Response|null $response = null
+        Response|null $response = null,
     ): array {
         $resolved = array_merge(
             $this->strategy->tags($request, $response),
@@ -353,7 +346,7 @@ class ResponseCache
 
         return array_map(fn(string $tag) => $this->replaceBinding(
             $tag,
-            $request
+            $request,
         ), array_filter($resolved));
     }
 

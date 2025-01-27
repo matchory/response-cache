@@ -1,4 +1,5 @@
 <?php
+
 /** @noinspection PhpMissingFieldTypeInspection */
 
 /**
@@ -32,8 +33,6 @@ class ClearCacheCommand extends Command
     protected $aliases = ['response-cache:flush'];
 
     /**
-     * @param Repository $repository
-     *
      * @throws BadMethodCallException
      */
     public function handle(Repository $repository): int

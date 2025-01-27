@@ -29,17 +29,14 @@ readonly class Repository
 {
     public function __construct(
         protected CacheRepository $store,
-        protected Dispatcher $eventDispatcher
-    ) {
-    }
+        protected Dispatcher $eventDispatcher,
+    ) {}
 
     /**
      * Retrieves a response from the cache.
      *
-     * @param string        $key
-     * @param string[]|null $tags
+     * @param  string[]|null  $tags
      *
-     * @return Response|null
      * @throws BadMethodCallException
      * @throws InvalidArgumentException
      */
@@ -47,7 +44,7 @@ readonly class Repository
     {
         $response = $this->getStore($tags)->get($key);
 
-        if ( ! $response) {
+        if (! $response) {
             return null;
         }
 
@@ -57,8 +54,7 @@ readonly class Repository
     /**
      * Deletes a cached response.
      *
-     * @param string        $key
-     * @param string[]|null $tags
+     * @param  string[]|null  $tags
      *
      * @throws BadMethodCallException
      */
@@ -70,7 +66,7 @@ readonly class Repository
     /**
      * Flushes the response cache.
      *
-     * @param string[]|null $tags
+     * @param  string[]|null  $tags
      *
      * @throws BadMethodCallException
      */
@@ -84,10 +80,8 @@ readonly class Repository
     /**
      * Checks whether a response is cached.
      *
-     * @param string        $key
-     * @param string[]|null $tags
+     * @param  string[]|null  $tags
      *
-     * @return bool
      * @throws BadMethodCallException
      * @throws InvalidArgumentException
      */
@@ -99,10 +93,7 @@ readonly class Repository
     /**
      * Puts a response into the cache.
      *
-     * @param string        $key
-     * @param Response      $response
-     * @param string[]|null $tags
-     * @param int|null      $ttl
+     * @param  string[]|null  $tags
      *
      * @throws BadMethodCallException
      */
@@ -110,7 +101,7 @@ readonly class Repository
         string $key,
         Response $response,
         array|null $tags = null,
-        int|null $ttl = null
+        int|null $ttl = null,
     ): void {
         $serialized = $this->serialize($response);
 
@@ -121,9 +112,8 @@ readonly class Repository
      * Retrieves the store instance. If it supports tags, a tagged instance for
      * the given tags will be returned, the untagged store otherwise.
      *
-     * @param string[]|null $tags
+     * @param  string[]|null  $tags
      *
-     * @return CacheRepository
      * @throws BadMethodCallException
      */
     protected function getStore(array|null $tags = null): CacheRepository
@@ -137,8 +127,7 @@ readonly class Repository
      * Hydrates a serialized response. This method may be overridden by children
      * implementations to add custom hydration mechanisms.
      *
-     * @param mixed $cached Cached representation of the response.
-     *
+     * @param  mixed  $cached  Cached representation of the response.
      * @return Response Hydrated response instance.
      */
     protected function hydrate(mixed $cached): Response
@@ -150,9 +139,9 @@ readonly class Repository
      * Serializes the response. This method may be overridden by children
      * implementations to add custom serialization mechanisms.
      *
-     * @param Response $response Response instance.
-     *
+     * @param  Response  $response  Response instance.
      * @return mixed Serialized response representation.
+     *
      * @noinspection PhpMixedReturnTypeCanBeReducedInspection
      */
     protected function serialize(Response $response): mixed
@@ -162,8 +151,6 @@ readonly class Repository
 
     /**
      * Checks whether the store supports tags.
-     *
-     * @return bool
      */
     protected function supportsTags(): bool
     {

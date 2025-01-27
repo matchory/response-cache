@@ -21,6 +21,7 @@ use Matchory\ResponseCache\ResponseCache as Instance;
  * @method static bool enabled() Checks whether the cache is enabled
  *
  * @bundle Matchory\ResponseCache
+ *
  * @see    Instance
  */
 class ResponseCache extends Facade

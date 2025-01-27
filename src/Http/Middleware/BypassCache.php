@@ -24,12 +24,6 @@ use Symfony\Component\HttpFoundation\Response;
  */
 readonly class BypassCache
 {
-    /**
-     * @param Request $request
-     * @param Closure $next
-     *
-     * @return Response
-     */
     public function handle(Request $request, Closure $next): Response
     {
         $request->attributes->add([
