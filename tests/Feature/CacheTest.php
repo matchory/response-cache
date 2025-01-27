@@ -3,6 +3,7 @@
 namespace Matchory\ResponseCache\Tests\Feature;
 
 use function beforeEach;
+use function it;
 use function test;
 
 beforeEach(function () {
@@ -42,4 +43,19 @@ it('adds timing headers if enabled', function () {
     test()->get('/uncached')->assertHeaderMissing('Server-Timing');
     test()->get('/cached')->assertHeaderMissing('Server-Timing');
     test()->get('/cached')->assertHeader('Server-Timing');
+});
+
+it('adds cache status headers', function () {
+    test()->get('/cached')->assertHeader('Response-Cache-Status', 'miss');
+    test()->get('/cached')->assertHeader('Response-Cache-Status', 'hit');
+    test()->get('/cached')->assertHeader('Response-Cache-Status', 'hit');
+});
+
+it('adds no cache status headers if disabled', function () {
+    $this->app['config']->set('response-cache.cache_status_enabled', false);
+
+    test()->get('/uncached')->assertHeaderMissing('Response-Cache-Status');
+    test()->get('/uncached')->assertHeaderMissing('Response-Cache-Status');
+    test()->get('/cached')->assertHeaderMissing('Response-Cache-Status');
+    test()->get('/cached')->assertHeaderMissing('Response-Cache-Status');
 });

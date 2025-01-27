@@ -21,6 +21,7 @@ use Psr\SimpleCache\InvalidArgumentException;
 use Symfony\Component\HttpFoundation\Response;
 
 use function array_shift;
+use function config;
 use function is_numeric;
 
 /**
@@ -84,6 +85,10 @@ readonly class CacheResponse
             $tags,
             $ttl,
         );
+
+        if (config('response-cache.cache_status_enabled')) {
+            $response->headers->set('Response-Cache-Status', 'miss');
+        }
 
         return $response;
     }

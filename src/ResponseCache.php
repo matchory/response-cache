@@ -197,6 +197,7 @@ class ResponseCache
         );
 
         $response = $this->addServerTiming($response);
+        $response = $this->addCacheStatus($response);
 
         $this->cache->put($key, $response, $tags, $ttl);
     }
@@ -225,6 +226,17 @@ class ResponseCache
         );
 
         return $cloned;
+    }
+
+    protected function addCacheStatus(Response $response): Response
+    {
+        if (! $this->config()->get('response-cache.cache_status_enabled')) {
+            return $response;
+        }
+
+        $response->headers->set('Response-Cache-Status', 'hit');
+
+        return $response;
     }
 
     /**

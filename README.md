@@ -102,6 +102,11 @@ easier. Leaving it enabled in production probably has no negative consequences a
 
 Defaults to `false`.
 
+### `cache_status_enabled` (Environment variable: `RESPONSE_CACHE_STATUS_ENABLED`)
+If the cache status option is enabled, a `Response-Cache-Status` header containing the cache status (`hit` or `miss`) will be added to all responses. This makes debugging easier.
+
+Defaults to `true`.
+
 Usage
 -----
 After following the installation instructions above, you should be ready to go: Responses with a status code in the `200` and `300` range will be cached and

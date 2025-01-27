@@ -66,4 +66,15 @@ return [
     |
     */
     'server_timing' => env('RESPONSE_CACHE_SERVER_TIMING', false),
+
+    /*
+     |--------------------------------------------------------------------------
+     | Enable Status Header
+     |--------------------------------------------------------------------------
+     |
+     | If the status header option is enabled, a Response-Cache-Status header
+     | containing the cache status (`miss` or `hit`) will be added to all cached
+     | responses. This makes debugging easier.
+     */
+    'cache_status_enabled' => env('RESPONSE_CACHE_STATUS_ENABLED', true),
 ];
