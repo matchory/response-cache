@@ -67,10 +67,6 @@ class ResponseCache
         protected readonly CacheStrategy $strategy,
     ) {
         $this->configResolver = $configResolver;
-        $this->enabled = $this->config()->get(
-            'response-cache.enabled',
-            true,
-        );
     }
 
     /**
@@ -126,7 +122,7 @@ class ResponseCache
      */
     public function enabled(): bool
     {
-        return $this->enabled;
+        return $this->config()->get('response-cache.enabled', true);
     }
 
     /**
