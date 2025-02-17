@@ -10,8 +10,7 @@ declare(strict_types=1);
 
 namespace Matchory\ResponseCache;
 
-use Illuminate\Contracts\Cache\Factory;
-use Illuminate\Contracts\Cache\Repository as CacheRepository;
+use Illuminate\Contracts\Cache\{Factory, Repository as CacheRepository};
 use Illuminate\Contracts\Config\Repository as Config;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
