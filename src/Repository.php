@@ -72,7 +72,7 @@ readonly class Repository
      */
     public function flush(array|null $tags = null): void
     {
-        $this->getStore($tags)->clear();
+        $this->getStore($tags)->flush();
 
         $this->eventDispatcher->dispatch(new Flush($tags));
     }
