@@ -35,11 +35,6 @@ class ResponseCache
     final public const BYPASS_ATTRIBUTE = 'response-cache.bypass';
 
     /**
-     * Whether the cache is enabled.
-     */
-    protected readonly bool $enabled;
-
-    /**
      * @var Closure(): Config
      */
     private readonly Closure $configResolver;

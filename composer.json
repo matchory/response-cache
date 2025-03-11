@@ -1,53 +1,60 @@
 {
-    "name": "matchory/response-cache",
-    "description": "A package to add automatic response caching to Laravel APIs.",
-    "type": "library",
-    "require": {
-        "php": ">=8.2",
-        "illuminate/support": "^v10.48.27|^11.40.0"
-    },
-    "require-dev": {
-        "illuminate/auth": "^v10.48.27|^11.40.0",
-        "illuminate/cache": "^v10.48.27|^11.40.0",
-        "illuminate/contracts": "^v10.48.27|^v11.40.0",
-        "illuminate/http": "^v10.48.27|^v11.40.0",
-        "orchestra/testbench": "^9.9",
-        "pestphp/pest": "^3.7",
-        "pestphp/pest-plugin-laravel": "^3.1",
-        "phpunit/phpunit": "^10.5.41|^11.5.3"
-    },
-    "autoload": {
-        "psr-4": {
-            "Matchory\\ResponseCache\\": "src/"
-        }
-    },
-    "autoload-dev": {
-        "psr-4": {
-            "Matchory\\ResponseCache\\Tests\\": "tests/"
-        }
-    },
-    "prefer-stable": true,
-    "extra": {
-        "laravel": {
-            "providers": [
-                "Matchory\\ResponseCache\\ResponseCacheProvider"
-            ],
-            "aliases": {
-                "ResponseCache": "Matchory\\ResponseCache\\Facades\\ResponseCache"
-            }
-        }
-    },
-    "config": {
-        "sort-packages": true,
-        "allow-plugins": {
-            "pestphp/pest-plugin": true
-        }
-    },
-    "license": "MIT",
-    "authors": [
-        {
-            "name": "Moritz Friedrich",
-            "email": "moritz@matchory.com"
-        }
-    ]
+  "name": "matchory/response-cache",
+  "description": "A package to add automatic response caching to Laravel APIs.",
+  "type": "library",
+  "require": {
+    "php": ">=8.2",
+    "illuminate/support": "^v10.48.27|^11.40.0|^v12.1.1"
+  },
+  "require-dev": {
+    "illuminate/auth": "^v10.48.27|^11.40.0|^v12.1.1",
+    "illuminate/cache": "^v10.48.27|^11.40.0|^v12.1.1",
+    "illuminate/contracts": "^v10.48.27|^v11.40.0|^v12.1.1",
+    "illuminate/http": "^v10.48.27|^v11.40.0|^v12.1.1",
+    "laravel/pint": "^1.21",
+    "orchestra/testbench": "^v10.1.0",
+    "pestphp/pest": "^v3.7.4",
+    "pestphp/pest-plugin-laravel": "^3.1.0",
+    "phpstan/phpstan": "^2.1",
+    "phpunit/phpunit": "^11.5.3"
+  },
+  "autoload": {
+    "psr-4": {
+      "Matchory\\ResponseCache\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Matchory\\ResponseCache\\Tests\\": "tests/"
+    }
+  },
+  "prefer-stable": true,
+  "extra": {
+    "laravel": {
+      "providers": [
+        "Matchory\\ResponseCache\\ResponseCacheProvider"
+      ],
+      "aliases": {
+        "ResponseCache": "Matchory\\ResponseCache\\Facades\\ResponseCache"
+      }
+    }
+  },
+  "scripts": {
+    "test": "pest",
+    "fmt": "pint",
+    "analyze": "phpstan --memory-limit=-1 analyse"
+  },
+  "config": {
+    "sort-packages": true,
+    "allow-plugins": {
+      "pestphp/pest-plugin": true
+    }
+  },
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Moritz Friedrich",
+      "email": "moritz@matchory.com"
+    }
+  ]
 }
