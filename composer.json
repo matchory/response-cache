@@ -3,20 +3,19 @@
   "description": "A package to add automatic response caching to Laravel APIs.",
   "type": "library",
   "require": {
-    "php": ">=8.2",
-    "illuminate/support": "^v10.48.27|^11.40.0|^v12.1.1"
+    "php": "^8.2",
+    "illuminate/support": "^12.0|^13.0"
   },
   "require-dev": {
-    "illuminate/auth": "^v10.48.27|^11.40.0|^v12.1.1",
-    "illuminate/cache": "^v10.48.27|^11.40.0|^v12.1.1",
-    "illuminate/contracts": "^v10.48.27|^v11.40.0|^v12.1.1",
-    "illuminate/http": "^v10.48.27|^v11.40.0|^v12.1.1",
+    "illuminate/auth": "^12.0|^13.0",
+    "illuminate/cache": "^12.0|^13.0",
+    "illuminate/contracts": "^12.0|^13.0",
+    "illuminate/http": "^12.0|^13.0",
     "laravel/pint": "^1.21",
-    "orchestra/testbench": "^v10.1.0",
-    "pestphp/pest": "^v3.7.4",
-    "pestphp/pest-plugin-laravel": "^3.1.0",
-    "phpstan/phpstan": "^2.1",
-    "phpunit/phpunit": "^11.5.3"
+    "orchestra/testbench": "^10.0|^11.0",
+    "pestphp/pest": "^3.8|^4.0",
+    "pestphp/pest-plugin-laravel": "^3.2|^4.0",
+    "phpstan/phpstan": "^2.1"
   },
   "autoload": {
     "psr-4": {
