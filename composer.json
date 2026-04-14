@@ -4,13 +4,13 @@
   "type": "library",
   "require": {
     "php": ">=8.2",
-    "illuminate/support": "^v10.48.27|^11.40.0|^v12.1.1"
+    "illuminate/support": "^v10.48.27|^11.40.0|^v12.1.1|^13.0"
   },
   "require-dev": {
-    "illuminate/auth": "^v10.48.27|^11.40.0|^v12.1.1",
-    "illuminate/cache": "^v10.48.27|^11.40.0|^v12.1.1",
-    "illuminate/contracts": "^v10.48.27|^v11.40.0|^v12.1.1",
-    "illuminate/http": "^v10.48.27|^v11.40.0|^v12.1.1",
+    "illuminate/auth": "^v10.48.27|^11.40.0|^v12.1.1|^13.0",
+    "illuminate/cache": "^v10.48.27|^11.40.0|^v12.1.1|^13.0",
+    "illuminate/contracts": "^v10.48.27|^v11.40.0|^v12.1.1|^13.0",
+    "illuminate/http": "^v10.48.27|^v11.40.0|^v12.1.1|^13.0",
     "laravel/pint": "^1.21",
     "orchestra/testbench": "^v10.1.0",
     "pestphp/pest": "^v3.7.4",
