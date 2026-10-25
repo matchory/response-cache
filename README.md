@@ -288,8 +288,7 @@ class MyStrategy extends BaseStrategy
 ```
 
 ### Using the `ResponseCache` middleware manually
-When adding the middleware to routes, you
-also have the possibility to configure the time to leave and add a set of tags per route:
+When adding the middleware to routes, you also have the possibility to configure the time to leave and add a set of tags per route:
 
 ```php
 // Default settings as set in the config file

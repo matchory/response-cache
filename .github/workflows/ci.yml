@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   test:
     name: PHP ${{ matrix.php }} / Laravel ${{ matrix.laravel }} (${{ matrix.stability }})
@@ -28,7 +32,7 @@ jobs:
           php-version: ${{ matrix.php }}
           coverage: none
       - run: composer update --${{ matrix.stability }} --with "illuminate/support:^${{ matrix.laravel }}.0" --with-all-dependencies --no-interaction --no-progress
-      - run: vendor/bin/pest
+      - run: composer test
 
   lint:
     name: Pint, PHPStan and audit
