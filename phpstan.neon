@@ -3,3 +3,9 @@ parameters:
     paths:
         - src
         - tests
+    ignoreErrors:
+        # Pest's test() helper and $this binding are dynamic; PHPStan can't resolve them
+        - identifier: method.notFound
+          path: tests/Feature/*
+        - identifier: property.notFound
+          path: tests/Feature/*

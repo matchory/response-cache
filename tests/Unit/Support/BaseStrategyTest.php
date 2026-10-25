@@ -26,7 +26,6 @@ use PHPUnit\Framework\MockObject\Generator\ClassIsFinalException;
 use PHPUnit\Framework\MockObject\Generator\DuplicateMethodException;
 use PHPUnit\Framework\MockObject\Generator\InvalidMethodNameException;
 use PHPUnit\Framework\MockObject\Generator\NameAlreadyInUseException;
-use PHPUnit\Framework\MockObject\Generator\OriginalConstructorInvocationRequiredException;
 use PHPUnit\Framework\MockObject\Generator\ReflectionException;
 use PHPUnit\Framework\MockObject\Generator\RuntimeException;
 use PHPUnit\Framework\MockObject\Generator\UnknownTypeException;
@@ -45,7 +44,6 @@ class BaseStrategyTest extends TestCase
      * @throws InvalidArgumentException
      * @throws InvalidMethodNameException
      * @throws NameAlreadyInUseException
-     * @throws OriginalConstructorInvocationRequiredException
      * @throws ReflectionException
      * @throws RuntimeException
      * @throws UnknownTypeException
@@ -70,7 +68,6 @@ class BaseStrategyTest extends TestCase
      * @throws InvalidArgumentException
      * @throws InvalidMethodNameException
      * @throws NameAlreadyInUseException
-     * @throws OriginalConstructorInvocationRequiredException
      * @throws ReflectionException
      * @throws RuntimeException
      * @throws UnknownTypeException
@@ -93,7 +90,6 @@ class BaseStrategyTest extends TestCase
      * @throws ExpectationFailedException
      * @throws InvalidArgumentException
      * @throws InvalidMethodNameException
-     * @throws OriginalConstructorInvocationRequiredException
      * @throws ReflectionException
      * @throws RuntimeException
      * @throws UnknownTypeException
@@ -121,7 +117,6 @@ class BaseStrategyTest extends TestCase
      * @throws InvalidArgumentException
      * @throws InvalidMethodNameException
      * @throws NameAlreadyInUseException
-     * @throws OriginalConstructorInvocationRequiredException
      * @throws ReflectionException
      * @throws RuntimeException
      * @throws UnknownTypeException
@@ -158,7 +153,6 @@ class BaseStrategyTest extends TestCase
      * @throws InvalidArgumentException
      * @throws InvalidMethodNameException
      * @throws NameAlreadyInUseException
-     * @throws OriginalConstructorInvocationRequiredException
      * @throws ReflectionException
      * @throws RuntimeException
      * @throws UnknownTypeException

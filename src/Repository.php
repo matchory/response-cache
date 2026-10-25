@@ -72,6 +72,8 @@ readonly class Repository
      */
     public function flush(?array $tags = null): void
     {
+        // Not clear(): on tagged caches, it would flush the entire store
+        // @phpstan-ignore method.notFound (Illuminate\Cache\Repository proxies it to the store)
         $this->getStore($tags)->flush();
 
         $this->eventDispatcher->dispatch(new Flush($tags));
@@ -119,6 +121,7 @@ readonly class Repository
     protected function getStore(?array $tags = null): CacheRepository
     {
         return $this->supportsTags()
+            // @phpstan-ignore method.notFound (guarded by supportsTags())
             ? $this->store->tags($tags)
             : $this->store;
     }

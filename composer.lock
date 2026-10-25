@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "d7bb6624d00cc764417487e72a391909",
+    "content-hash": "936b68058c00f5cd321c5351cb0f1f8e",
     "packages": [
         {
             "name": "brick/math",
@@ -6594,6 +6594,47 @@
                 "source": "https://github.com/Jean85/pretty-package-versions/tree/2.1.1"
             },
             "time": "2025-03-19T14:43:43+00:00"
+        },
+        {
+            "name": "jetbrains/phpstorm-attributes",
+            "version": "1.3",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/JetBrains/phpstorm-attributes",
+                "reference": "c9afb897cad47b087457f667ec2156dde8aed926"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/JetBrains/phpstorm-attributes/zipball/c9afb897cad47b087457f667ec2156dde8aed926",
+                "reference": "c9afb897cad47b087457f667ec2156dde8aed926",
+                "shasum": ""
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "JetBrains\\PhpStorm\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "Apache-2.0"
+            ],
+            "authors": [
+                {
+                    "name": "JetBrains",
+                    "homepage": "https://www.jetbrains.com"
+                }
+            ],
+            "description": "PhpStorm specific attributes",
+            "keywords": [
+                "attributes",
+                "jetbrains",
+                "phpstorm"
+            ],
+            "support": {
+                "issues": "https://youtrack.jetbrains.com/newIssue?project=WI"
+            },
+            "time": "2026-07-22T11:27:58+00:00"
         },
         {
             "name": "laravel/pail",
