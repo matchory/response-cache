@@ -15,7 +15,7 @@ Features
 
 ```php
 Route::get('/example')->middleware([
-    'cacheResponse:3600,examples'
+    'response_cache:3600,examples'
 ])
 ```
 
@@ -31,8 +31,8 @@ This also makes it possible to place the cache check anywhere in your middleware
 Requirements
 ------------
 
-- **PHP 8.0 or later**
-- Laravel 7.x or later
+- **PHP 8.2 or later**
+- Laravel 12.x or 13.x
 
 Installation
 ------------
@@ -52,23 +52,28 @@ php artisan vendor:publish --provider "Matchory\ResponseCache\ResponseCacheProvi
 
 Check out the [configuration section](#configuration) to learn about all available options.
 
-Add the middleware to your `app/Http/Kernel.php`:
+Register the middleware aliases in your `bootstrap/app.php`:
 
 ```php
-protected $middlewareGroups = [
-   'web' => [
-       // ...
-       \Matchory\ResponseCache\Http\Middleware\CacheResponse::class,
-       // ...
-   ],
-];
-
-protected $routeMiddleware = [
-    // ...
-    'bypass_cache' => \Matchory\ResponseCache\Http\Middleware\BypassCache::class,
-    // ...
-];
+->withMiddleware(function (Middleware $middleware): void {
+    $middleware->alias([
+        'response_cache' => \Matchory\ResponseCache\Http\Middleware\CacheResponse::class,
+        'bypass_cache' => \Matchory\ResponseCache\Http\Middleware\BypassCache::class,
+    ]);
+})
 ```
+
+Then add it to your routes, after authentication:
+
+```php
+Route::middleware(['auth:sanctum', 'response_cache'])->group(function () {
+    // ...
+});
+```
+
+> **Important:** The cache must run _after_ authentication. Cached responses are returned before any middleware that follows
+> `response_cache` runs, and cache entries are only separated per user if the user is already authenticated when the cache is
+> checked. Placing it before your authentication or authorization middleware can serve one user's responses to another.
 
 Configuration
 -------------
@@ -138,18 +143,18 @@ use Matchory\ResponseCache\Facades\ResponseCache;
 
 class ExampleObserver {
     public function saved(): void {
-        ResponseCache::clear();
+        ResponseCache::flush();
     }
 
     public function deleted(): void {
         // By passing one or more tags, only those items tagged appropriately
         // will be cleared
-        ResponseCache::clear(['example']);
+        ResponseCache::flush(['example']);
     }
 }
 ```
 
-By invoking the `clear` method, the entire store (for the given tags) will be purged. To be more selective, use the `delete` method:
+By invoking the `flush` method, the entire store (for the given tags) will be purged. To be more selective, use the `delete` method:
 
 ```php
 use Matchory\ResponseCache\Facades\ResponseCache;
@@ -173,7 +178,7 @@ using several approaches:
 
 - By passing them to the middleware:
   ```php
-  Route::get('/foo')->middleware(['cache:tag-1,tag-2']);
+  Route::get('/foo')->middleware(['response_cache:tag-1,tag-2']);
   ```
 - By adding them to the `config/response-cache.php` config file:
   ```php
@@ -193,7 +198,7 @@ Take a look at the following example:
 ```php
 Route::get('/api/v{version}/flights/{flight}', function(\App\Flight $flight) {
     // ...
-})->middleware('cache:api.v{version},flights,flights.v{version},flights.{flight},flights.v{version}.{flight}');
+})->middleware('response_cache:api.v{version},flights,flights.v{version},flights.{flight},flights.v{version}.{flight}');
 ```
 
 Imagine we perform the following request: `/api/v3/flights/505`  
@@ -283,8 +288,7 @@ class MyStrategy extends BaseStrategy
 ```
 
 ### Using the `ResponseCache` middleware manually
-Instead of simply adding the caching middleware to all web routes as shown above, you can of course also add it to selected routes manually. In this case, you
-also have the possibility to configure the time to leave and add a set of tags per route:
+When adding the middleware to routes, you also have the possibility to configure the time to leave and add a set of tags per route:
 
 ```php
 // Default settings as set in the config file

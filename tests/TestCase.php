@@ -39,6 +39,14 @@ abstract class TestCase extends BaseTestCase
             ->middleware(CacheResponse::class)
             ->middleware(BypassCache::class)
             ->name('bypass');
+        $router
+            ->get('/tagged/{item}', function () {
+                static $i = 0;
+
+                return ++$i;
+            })
+            ->middleware(CacheResponse::class . ':items.{item},filter.{filter}')
+            ->name('tagged');
     }
 
     protected function getPackageProviders($app): array

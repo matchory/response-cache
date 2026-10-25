@@ -38,5 +38,5 @@ interface CacheStrategy
      *
      * @return string[]
      */
-    public function tags(Request $request, Response|null $response = null): array;
+    public function tags(Request $request, ?Response $response = null): array;
 }

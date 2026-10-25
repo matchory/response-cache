@@ -35,7 +35,6 @@ use PHPUnit\Framework\MockObject\Generator\ClassIsFinalException;
 use PHPUnit\Framework\MockObject\Generator\DuplicateMethodException;
 use PHPUnit\Framework\MockObject\Generator\InvalidMethodNameException;
 use PHPUnit\Framework\MockObject\Generator\NameAlreadyInUseException;
-use PHPUnit\Framework\MockObject\Generator\OriginalConstructorInvocationRequiredException;
 use PHPUnit\Framework\MockObject\Generator\ReflectionException;
 use PHPUnit\Framework\MockObject\Generator\RuntimeException;
 use PHPUnit\Framework\MockObject\Generator\UnknownTypeException;
@@ -54,7 +53,6 @@ class ResponseCacheTest extends TestCase
      * @throws InvalidArgumentException
      * @throws InvalidMethodNameException
      * @throws NameAlreadyInUseException
-     * @throws OriginalConstructorInvocationRequiredException
      * @throws ReflectionException
      * @throws RuntimeException
      * @throws UnknownTypeException
@@ -86,7 +84,6 @@ class ResponseCacheTest extends TestCase
      * @throws InvalidArgumentException
      * @throws InvalidMethodNameException
      * @throws NameAlreadyInUseException
-     * @throws OriginalConstructorInvocationRequiredException
      * @throws ReflectionException
      * @throws RuntimeException
      * @throws UnknownTypeException
@@ -118,13 +115,12 @@ class ResponseCacheTest extends TestCase
      * @throws DuplicateMethodException
      * @throws InvalidArgumentException
      * @throws InvalidMethodNameException
-     * @throws OriginalConstructorInvocationRequiredException
      * @throws ReflectionException
      * @throws RuntimeException
      * @throws UnknownTypeException
      * @throws NameAlreadyInUseException
      */
-    private function createConfigResolver(array|null $values = null): callable
+    private function createConfigResolver(?array $values = null): callable
     {
         $config = $this
             ->getMockBuilder(Config::class)
@@ -143,7 +139,6 @@ class ResponseCacheTest extends TestCase
      * @throws InvalidArgumentException
      * @throws InvalidMethodNameException
      * @throws NameAlreadyInUseException
-     * @throws OriginalConstructorInvocationRequiredException
      * @throws ReflectionException
      * @throws RuntimeException
      * @throws UnknownTypeException
@@ -163,7 +158,6 @@ class ResponseCacheTest extends TestCase
      * @throws InvalidArgumentException
      * @throws InvalidMethodNameException
      * @throws NameAlreadyInUseException
-     * @throws OriginalConstructorInvocationRequiredException
      * @throws ReflectionException
      * @throws RuntimeException
      * @throws UnknownTypeException
@@ -185,12 +179,11 @@ class ResponseCacheTest extends TestCase
      * @throws InvalidArgumentException
      * @throws InvalidMethodNameException
      * @throws NameAlreadyInUseException
-     * @throws OriginalConstructorInvocationRequiredException
      * @throws ReflectionException
      * @throws RuntimeException
      * @throws UnknownTypeException
      */
-    private function createResponseCache(array|null $config = null): ResponseCache
+    private function createResponseCache(?array $config = null): ResponseCache
     {
         $config ??= [
             'response-cache.enabled' => true,

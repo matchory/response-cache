@@ -52,7 +52,7 @@ class BaseStrategy implements CacheStrategy
     /**
      * {@inheritDoc}
      */
-    public function tags(Request $request, Response|null $response = null): array
+    public function tags(Request $request, ?Response $response = null): array
     {
         return [];
     }
