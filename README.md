@@ -138,18 +138,18 @@ use Matchory\ResponseCache\Facades\ResponseCache;
 
 class ExampleObserver {
     public function saved(): void {
-        ResponseCache::clear();
+        ResponseCache::flush();
     }
 
     public function deleted(): void {
         // By passing one or more tags, only those items tagged appropriately
         // will be cleared
-        ResponseCache::clear(['example']);
+        ResponseCache::flush(['example']);
     }
 }
 ```
 
-By invoking the `clear` method, the entire store (for the given tags) will be purged. To be more selective, use the `delete` method:
+By invoking the `flush` method, the entire store (for the given tags) will be purged. To be more selective, use the `delete` method:
 
 ```php
 use Matchory\ResponseCache\Facades\ResponseCache;
