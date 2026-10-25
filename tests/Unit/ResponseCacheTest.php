@@ -124,7 +124,7 @@ class ResponseCacheTest extends TestCase
      * @throws UnknownTypeException
      * @throws NameAlreadyInUseException
      */
-    private function createConfigResolver(array|null $values = null): callable
+    private function createConfigResolver(?array $values = null): callable
     {
         $config = $this
             ->getMockBuilder(Config::class)
@@ -190,7 +190,7 @@ class ResponseCacheTest extends TestCase
      * @throws RuntimeException
      * @throws UnknownTypeException
      */
-    private function createResponseCache(array|null $config = null): ResponseCache
+    private function createResponseCache(?array $config = null): ResponseCache
     {
         $config ??= [
             'response-cache.enabled' => true,

@@ -66,8 +66,8 @@ readonly class CacheResponse
         $tags = $args;
 
         if (
-            $this->responseCache->has($request, $tags) &&
-            ($response = $this->responseCache->get($request, $tags)) !== null
+            $this->responseCache->has($request, $tags)
+            && ($response = $this->responseCache->get($request, $tags)) !== null
         ) {
             $this->eventDispatcher->dispatch(new Hit($request));
 

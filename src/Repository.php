@@ -40,7 +40,7 @@ readonly class Repository
      * @throws BadMethodCallException
      * @throws InvalidArgumentException
      */
-    public function get(string $key, array|null $tags = null): Response|null
+    public function get(string $key, ?array $tags = null): ?Response
     {
         $response = $this->getStore($tags)->get($key);
 
@@ -58,7 +58,7 @@ readonly class Repository
      *
      * @throws BadMethodCallException
      */
-    public function delete(string $key, array|null $tags = null): void
+    public function delete(string $key, ?array $tags = null): void
     {
         $this->getStore($tags)->forget($key);
     }
@@ -70,7 +70,7 @@ readonly class Repository
      *
      * @throws BadMethodCallException
      */
-    public function flush(array|null $tags = null): void
+    public function flush(?array $tags = null): void
     {
         $this->getStore($tags)->flush();
 
@@ -85,7 +85,7 @@ readonly class Repository
      * @throws BadMethodCallException
      * @throws InvalidArgumentException
      */
-    public function has(string $key, array|null $tags = null): bool
+    public function has(string $key, ?array $tags = null): bool
     {
         return $this->getStore($tags)->has($key);
     }
@@ -100,8 +100,8 @@ readonly class Repository
     public function put(
         string $key,
         Response $response,
-        array|null $tags = null,
-        int|null $ttl = null,
+        ?array $tags = null,
+        ?int $ttl = null,
     ): void {
         $serialized = $this->serialize($response);
 
@@ -116,7 +116,7 @@ readonly class Repository
      *
      * @throws BadMethodCallException
      */
-    protected function getStore(array|null $tags = null): CacheRepository
+    protected function getStore(?array $tags = null): CacheRepository
     {
         return $this->supportsTags()
             ? $this->store->tags($tags)

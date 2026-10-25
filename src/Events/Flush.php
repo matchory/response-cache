@@ -22,7 +22,7 @@ use JetBrains\PhpStorm\Deprecated;
  */
 readonly class Flush
 {
-    public function __construct(public array|null $tags = null) {}
+    public function __construct(public ?array $tags = null) {}
 
     /**
      * @deprecated Use the tags property directly
@@ -31,7 +31,7 @@ readonly class Flush
         reason: 'Use the tags property directly',
         replacement: '%class%->tags',
     )]
-    public function getTags(): array|null
+    public function getTags(): ?array
     {
         return $this->tags;
     }

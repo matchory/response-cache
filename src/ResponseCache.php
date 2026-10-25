@@ -75,7 +75,7 @@ class ResponseCache
      * @throws BadMethodCallException
      * @throws InvalidArgumentException
      */
-    public function get(Request $request, array|null $tags = null): Response|null
+    public function get(Request $request, ?array $tags = null): ?Response
     {
         $key = $this->strategy->key($request);
         $tags = $this->resolveTags($tags, $request);
@@ -126,7 +126,7 @@ class ResponseCache
      *
      * @throws BadMethodCallException
      */
-    public function flush(array|null $tags = null): void
+    public function flush(?array $tags = null): void
     {
         $tags = array_merge($this->getDefaultTags(), $tags ?? []);
 
@@ -144,7 +144,7 @@ class ResponseCache
      * @throws BadMethodCallException
      * @throws InvalidArgumentException
      */
-    public function has(Request $request, array|null $tags = null): bool
+    public function has(Request $request, ?array $tags = null): bool
     {
         $key = $this->strategy->key($request);
         $tags = $this->resolveTags($tags, $request);
@@ -165,8 +165,8 @@ class ResponseCache
     public function put(
         Request $request,
         Response $response,
-        array|null $tags = null,
-        int|null $ttl = null,
+        ?array $tags = null,
+        ?int $ttl = null,
     ): void {
         // Escape hatch to bypass caching via middleware
         if ($request->attributes->has(self::BYPASS_ATTRIBUTE)) {
@@ -246,7 +246,7 @@ class ResponseCache
      *
      * @return int|null Time-to-live in seconds if configured, `null` otherwise
      */
-    protected function getDefaultTtl(): int|null
+    protected function getDefaultTtl(): ?int
     {
         return $this->config()->get('response-cache.ttl');
     }
@@ -315,8 +315,8 @@ class ResponseCache
             // We can't replace non-scalar values, so to prevent errors in the
             // `str_replace` call below, we skip other values
             if (
-                !is_scalar($value) &&
-                !($value instanceof Stringable)
+                !is_scalar($value)
+                && !($value instanceof Stringable)
             ) {
                 continue;
             }
@@ -340,9 +340,9 @@ class ResponseCache
      * @return string[] List of finalized tags.
      */
     protected function resolveTags(
-        array|null $tags,
+        ?array $tags,
         Request $request,
-        Response|null $response = null,
+        ?Response $response = null,
     ): array {
         $resolved = array_merge(
             $this->strategy->tags($request, $response),
