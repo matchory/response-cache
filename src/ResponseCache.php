@@ -40,13 +40,6 @@ class ResponseCache
     private readonly Closure $configResolver;
 
     /**
-     * Stores resolved tags to speed up repeated queries.
-     *
-     * @var array<string, string>
-     */
-    private array $resolvedTags = [];
-
-    /**
      * Creates a new response cache instance.
      *
      * @param callable(): Config $configResolver
@@ -275,10 +268,6 @@ class ResponseCache
      */
     protected function replaceBinding(string $tag, Request $request): string
     {
-        if (isset($this->resolvedTags[$tag])) {
-            return $this->resolvedTags[$tag];
-        }
-
         // If there is no opening curly brace in the tag, there's no need to run
         // a regular expression match
         if (!str_contains($tag, '{')) {
@@ -299,8 +288,7 @@ class ResponseCache
             $name = substr($match, 1, -1);
 
             $value = $request->route($name)
-                ?? $request->get($name)
-                ?? null;
+                ?? $request->input($name);
 
             if (!$value) {
                 continue;
@@ -326,7 +314,7 @@ class ResponseCache
             $tag = str_replace($match, $value, $tag);
         }
 
-        return $this->resolvedTags[$tag] = $tag;
+        return $tag;
     }
 
     /**
