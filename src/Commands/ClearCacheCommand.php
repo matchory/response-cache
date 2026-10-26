@@ -12,9 +12,10 @@ declare(strict_types=1);
 
 namespace Matchory\ResponseCache\Commands;
 
-use BadMethodCallException;
 use Illuminate\Console\Command;
-use Matchory\ResponseCache\Repository;
+use Matchory\ResponseCache\ResponseCache;
+use Random\RandomException;
+use RuntimeException;
 use Symfony\Component\Console\Attribute\AsCommand;
 
 /**
@@ -33,11 +34,14 @@ class ClearCacheCommand extends Command
     protected $aliases = ['response-cache:flush'];
 
     /**
-     * @throws BadMethodCallException
+     * @throws RandomException
+     * @throws RuntimeException
      */
-    public function handle(Repository $repository): int
+    public function handle(ResponseCache $responseCache): int
     {
-        $repository->flush($this->argument('tags'));
+        $tags = $this->argument('tags');
+
+        $responseCache->flush($tags === [] ? null : $tags);
 
         $this->components->info('Response cache flushed successfully.');
 

@@ -10,13 +10,13 @@ declare(strict_types=1);
 
 namespace Matchory\ResponseCache\Http\Middleware;
 
-use BadMethodCallException;
 use Closure;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Http\Request;
 use Matchory\ResponseCache\Events\{Hit, Miss};
 use Matchory\ResponseCache\ResponseCache;
 use Psr\SimpleCache\InvalidArgumentException;
+use Random\RandomException;
 use Symfony\Component\HttpFoundation\Response;
 
 use function array_shift;
@@ -46,15 +46,18 @@ readonly class CacheResponse
     /**
      * Handles requests.
      *
-     * @throws BadMethodCallException
      * @throws InvalidArgumentException
+     * @throws RandomException
      */
     public function handle(
         Request $request,
         Closure $next,
         string ...$args,
     ): Response {
-        if (! $this->responseCache->enabled()) {
+        if (
+            ! $this->responseCache->enabled()
+            || ! $this->responseCache->isCacheable($request)
+        ) {
             return $next($request);
         }
 
@@ -65,25 +68,28 @@ readonly class CacheResponse
             : null;
         $tags = $args;
 
-        if (
-            $this->responseCache->has($request, $tags)
-            && ($response = $this->responseCache->get($request, $tags)) !== null
-        ) {
+        // The lookup happens before the response is built, so its snapshot
+        // predates any flush that happens while it is being built
+        $lookup = $this->responseCache->lookup($request, $tags);
+
+        if ($lookup->response !== null) {
             $this->eventDispatcher->dispatch(new Hit($request));
 
-            return $response;
+            return $lookup->response;
         }
 
         $response = $next($request);
 
         $this->eventDispatcher->dispatch(new Miss($request));
 
-        $this->responseCache->put(
-            $request,
-            clone $response,
-            $tags,
-            $ttl,
-        );
+        if ($lookup->snapshot !== null) {
+            $this->responseCache->put(
+                $request,
+                clone $response,
+                $lookup->snapshot,
+                $ttl,
+            );
+        }
 
         if (config('response-cache.cache_status_enabled')) {
             $response->headers->set('Response-Cache-Status', 'miss');
