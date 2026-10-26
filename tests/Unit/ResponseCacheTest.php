@@ -64,14 +64,79 @@ class ResponseCacheTest extends TestCase
     {
         $responseCache = $this->createResponseCache();
         $response = new Response('foo');
+        $lookup = $responseCache->lookup(Request::create('/'));
 
-        self::assertFalse($responseCache->has(Request::create('/')));
-        $responseCache->put(Request::create('/'), $response);
-        self::assertTrue($responseCache->has(Request::create('/')));
+        self::assertNull($lookup->response);
+        self::assertNotNull($lookup->snapshot);
+        $responseCache->put(Request::create('/'), $response, $lookup->snapshot);
         self::assertSame(
             $response,
             $responseCache->get(Request::create('/')),
         );
+    }
+
+    /**
+     * @throws BadMethodCallException
+     * @throws ClassIsEnumerationException
+     * @throws ClassIsFinalException
+     * @throws DuplicateMethodException
+     * @throws ExpectationFailedException
+     * @throws InvalidArgumentException
+     * @throws InvalidMethodNameException
+     * @throws NameAlreadyInUseException
+     * @throws ReflectionException
+     * @throws RuntimeException
+     * @throws UnknownTypeException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     * @throws BadRequestException
+     */
+    #[Test]
+    public function flushIsDeferredThroughAfterCommit(): void
+    {
+        $deferred = [];
+        $responseCache = $this->createResponseCache(
+            afterCommit: static function (callable $callback) use (&$deferred) {
+                $deferred[] = $callback;
+            },
+        );
+        $request = Request::create('/');
+        $snapshot = $responseCache->snapshot($request, ['users']);
+        $responseCache->put($request, new Response('foo'), $snapshot);
+
+        $responseCache->flush(['users']);
+        self::assertNotNull($responseCache->get($request, ['users']));
+        self::assertCount(1, $deferred);
+
+        $deferred[0]();
+        self::assertNull($responseCache->get($request, ['users']));
+    }
+
+    /**
+     * @throws BadMethodCallException
+     * @throws ClassIsEnumerationException
+     * @throws ClassIsFinalException
+     * @throws DuplicateMethodException
+     * @throws ExpectationFailedException
+     * @throws InvalidArgumentException
+     * @throws InvalidMethodNameException
+     * @throws NameAlreadyInUseException
+     * @throws ReflectionException
+     * @throws RuntimeException
+     * @throws UnknownTypeException
+     */
+    #[Test]
+    public function flushWithEmptyArrayDoesNothing(): void
+    {
+        $deferred = [];
+        $responseCache = $this->createResponseCache(
+            afterCommit: static function (callable $callback) use (&$deferred) {
+                $deferred[] = $callback;
+            },
+        );
+
+        $responseCache->flush([]);
+
+        self::assertSame([], $deferred);
     }
 
     /**
@@ -95,7 +160,12 @@ class ResponseCacheTest extends TestCase
         $responseCache = $this->createResponseCache([
             'response-cache.cache_status_enabled' => true,
         ]);
-        $responseCache->put(Request::create('/'), new Response('foo'));
+        $request = Request::create('/');
+        $responseCache->put(
+            $request,
+            new Response('foo'),
+            $responseCache->snapshot($request),
+        );
 
         self::assertSame(
             'hit',
@@ -148,7 +218,7 @@ class ResponseCacheTest extends TestCase
         $cache = new CacheRepositoryImplementation(new ArrayStore());
         $dispatcher = $this->getMockBuilder(Dispatcher::class)->getMock();
 
-        return new Repository($cache, $dispatcher);
+        return new Repository($cache, $dispatcher, 3600);
     }
 
     /**
@@ -183,8 +253,10 @@ class ResponseCacheTest extends TestCase
      * @throws RuntimeException
      * @throws UnknownTypeException
      */
-    private function createResponseCache(?array $config = null): ResponseCache
-    {
+    private function createResponseCache(
+        ?array $config = null,
+        ?callable $afterCommit = null,
+    ): ResponseCache {
         $config ??= [
             'response-cache.enabled' => true,
             'response-cache.ttl' => 42,
@@ -196,8 +268,11 @@ class ResponseCacheTest extends TestCase
         $cache = $this->createRepository();
         $strategy = $this->createStrategy();
 
+        $afterCommit ??= static fn(callable $callback) => $callback();
+
         return new ResponseCache(
             $configResolver,
+            $afterCommit,
             $urlGenerator,
             $cache,
             $strategy,

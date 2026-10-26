@@ -80,6 +80,15 @@ class ResponseCacheProvider extends ServiceProvider
             ->give(fn(Application $app) => static fn(): Config => $app->make(
                 'config',
             ));
+
+        // Flushes are deferred until the current database transaction commits.
+        // The transaction manager is resolved on every call, never once.
+        $this->app
+            ->when(ResponseCache::class)
+            ->needs('$afterCommit')
+            ->give(fn(Application $app) => static fn(callable $callback) => $app->bound('db.transactions')
+                ? $app->make('db.transactions')->addCallback($callback)
+                : $callback());
     }
 
     protected function registerCommands(): void

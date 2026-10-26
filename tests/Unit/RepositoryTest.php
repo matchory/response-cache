@@ -30,6 +30,8 @@ class RepositoryTest extends TestCase
 {
     private const TAG_TTL = 3600;
 
+    private ArrayStore $arrayStore;
+
     private CacheRepositoryImplementation $store;
 
     private Dispatcher $events;
@@ -41,7 +43,8 @@ class RepositoryTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->store = new CacheRepositoryImplementation(new ArrayStore());
+        $this->arrayStore = new ArrayStore();
+        $this->store = new CacheRepositoryImplementation($this->arrayStore);
         $this->events = new Dispatcher();
         $this->events->listen(Flush::class, function (Flush $event) {
             $this->flushes[] = $event;
@@ -148,7 +151,7 @@ class RepositoryTest extends TestCase
 
         self::assertNotSame($before[$key], $after[$key]);
 
-        foreach (array_keys($this->store->getStore()->all()) as $stored) {
+        foreach (array_keys($this->arrayStore->all()) as $stored) {
             self::assertMatchesRegularExpression(
                 '/^response-cache:tag:([0-9a-f]{40}|\*)$/',
                 $stored,
