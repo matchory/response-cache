@@ -40,6 +40,14 @@ class BaseStrategy implements CacheStrategy
     /**
      * {@inheritDoc}
      */
+    public function isCacheable(Request $request): bool
+    {
+        return $this->isMethodCachable($request);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
     public function shouldCache(Request $request, Response $response): bool
     {
         if (! $this->isMethodCachable($request)) {
@@ -52,7 +60,7 @@ class BaseStrategy implements CacheStrategy
     /**
      * {@inheritDoc}
      */
-    public function tags(Request $request, ?Response $response = null): array
+    public function tags(Request $request): array
     {
         return [];
     }

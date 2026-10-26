@@ -333,7 +333,7 @@ class ResponseCache
         ?Response $response = null,
     ): array {
         $resolved = array_merge(
-            $this->strategy->tags($request, $response),
+            $this->strategy->tags($request),
             $this->getDefaultTags(),
             $tags ?? [],
         );

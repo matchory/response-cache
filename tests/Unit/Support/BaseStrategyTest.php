@@ -179,4 +179,56 @@ class BaseStrategyTest extends TestCase
 
         self::assertSame('9350d47085691dcd1698e672fb894b45', $key);
     }
+
+    /**
+     * @throws BadRequestException
+     * @throws ClassIsEnumerationException
+     * @throws ClassIsFinalException
+     * @throws DuplicateMethodException
+     * @throws ExpectationFailedException
+     * @throws InvalidArgumentException
+     * @throws InvalidMethodNameException
+     * @throws NameAlreadyInUseException
+     * @throws ReflectionException
+     * @throws RuntimeException
+     * @throws UnknownTypeException
+     */
+    public function testIsCacheableForSafeMethods(): void
+    {
+        $mock = $this->getMockBuilder(AuthManager::class);
+        $mock->disableOriginalConstructor();
+        $auth = $mock->getMock();
+        $strategy = new BaseStrategy($auth);
+
+        foreach (['GET', 'HEAD'] as $method) {
+            self::assertTrue($strategy->isCacheable(Request::create('/', $method)));
+        }
+
+        foreach (['POST', 'PUT', 'PATCH', 'DELETE'] as $method) {
+            self::assertFalse($strategy->isCacheable(Request::create('/', $method)));
+        }
+    }
+
+    /**
+     * @throws BadRequestException
+     * @throws ClassIsEnumerationException
+     * @throws ClassIsFinalException
+     * @throws DuplicateMethodException
+     * @throws ExpectationFailedException
+     * @throws InvalidArgumentException
+     * @throws InvalidMethodNameException
+     * @throws NameAlreadyInUseException
+     * @throws ReflectionException
+     * @throws RuntimeException
+     * @throws UnknownTypeException
+     */
+    public function testTagsAreEmptyByDefault(): void
+    {
+        $mock = $this->getMockBuilder(AuthManager::class);
+        $mock->disableOriginalConstructor();
+        $auth = $mock->getMock();
+        $strategy = new BaseStrategy($auth);
+
+        self::assertSame([], $strategy->tags(Request::create('/')));
+    }
 }
