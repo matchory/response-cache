@@ -22,17 +22,8 @@ beforeEach(function () {
     $this->app['cache']->flush();
 });
 
-it('clears everything via the command', function () {
-    test()->get('/cached')->assertContent('1');
-    test()->get('/cached')->assertContent('1');
-
-    Artisan::call('response-cache:clear');
-
-    test()->get('/cached')->assertContent('2');
-});
-
-it('clears everything with default tags configured', function () {
-    $this->app['config']->set('response-cache.tags', ['api']);
+it('clears everything via the command', function (array $defaultTags) {
+    $this->app['config']->set('response-cache.tags', $defaultTags);
 
     test()->get('/cached')->assertContent('1');
     test()->get('/cached')->assertContent('1');
@@ -40,7 +31,10 @@ it('clears everything with default tags configured', function () {
     Artisan::call('response-cache:clear');
 
     test()->get('/cached')->assertContent('2');
-});
+})->with([
+    'without default tags' => [[]],
+    'with default tags' => [['api']],
+]);
 
 it('flushes one tag without clearing others when default tags are set', function () {
     $this->app['config']->set('response-cache.tags', ['api']);
@@ -148,21 +142,17 @@ it('does not touch versions for non-cacheable requests', function () {
     expect($keys)->toBe([]);
 });
 
-describe('on a non-taggable store', function () {
-    beforeEach(function () {
-        $this->app['config']->set('response-cache.store', 'file');
-    });
+it('works on a non-taggable store', function () {
+    $this->app['config']->set('response-cache.store', 'file');
 
-    afterEach(function () {
-        Cache::store('file')->flush();
-    });
-
-    it('works on a non-taggable store', function () {
+    try {
         test()->get('/users/1')->assertContent('1');
         test()->get('/users/1')->assertContent('1');
 
         ResponseCache::flush(['user:1']);
 
         test()->get('/users/1')->assertContent('2');
-    });
+    } finally {
+        Cache::store('file')->flush();
+    }
 });

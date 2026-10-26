@@ -10,17 +10,17 @@ declare(strict_types=1);
 
 namespace Matchory\ResponseCache;
 
+use Illuminate\Cache\FailoverStore;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Contracts\Events\Dispatcher;
 use Matchory\ResponseCache\Events\Flush;
+use InvalidArgumentException as InvalidConfigurationException;
 use Psr\SimpleCache\InvalidArgumentException;
 use Random\RandomException;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\Response;
 
 use function array_map;
-use function array_unique;
-use function array_values;
 use function bin2hex;
 use function count;
 use function is_array;
@@ -49,11 +49,28 @@ readonly class Repository
      */
     protected const GLOBAL_VERSION_KEY = self::VERSION_KEY_PREFIX . '*';
 
+    /**
+     * @throws InvalidConfigurationException
+     */
     public function __construct(
         protected CacheRepository $store,
         protected Dispatcher $eventDispatcher,
         protected int $tagTtl,
-    ) {}
+    ) {
+        // During an outage, it would write flushes to the secondary store only
+        if ($store->getStore() instanceof FailoverStore) {
+            throw new InvalidConfigurationException(
+                'The response cache does not support the failover cache store, because it can lose flushes during an outage.',
+            );
+        }
+
+        // Versions could never be created, so nothing would be cached
+        if ($tagTtl < 1) {
+            throw new InvalidConfigurationException(
+                'The response cache tag_ttl must be at least one second.',
+            );
+        }
+    }
 
     /**
      * Looks up a cached response. It is only returned if every tag version it
@@ -129,6 +146,7 @@ readonly class Repository
      *
      * @param  string[]|null  $tags
      *
+     * @throws InvalidArgumentException
      * @throws RandomException
      * @throws RuntimeException If the store fails to write a version
      */
@@ -141,13 +159,16 @@ readonly class Repository
         $keys = $tags === null
             ? [self::GLOBAL_VERSION_KEY]
             : array_map($this->versionKey(...), $tags);
+        $versions = [];
 
         foreach ($keys as $key) {
-            if (! $this->store->put($key, $this->newToken(), $this->tagTtl)) {
-                throw new RuntimeException(
-                    "Failed to write the response cache tag version '{$key}'",
-                );
-            }
+            $versions[$key] = $this->newToken();
+        }
+
+        if (! $this->store->setMultiple($versions, $this->tagTtl)) {
+            throw new RuntimeException(
+                'Failed to write the response cache tag versions',
+            );
         }
 
         $this->eventDispatcher->dispatch(new Flush($tags));
@@ -246,7 +267,7 @@ readonly class Repository
         $keys = array_map($this->versionKey(...), $tags);
         $keys[] = self::GLOBAL_VERSION_KEY;
 
-        return array_values(array_unique($keys));
+        return $keys;
     }
 
     /**

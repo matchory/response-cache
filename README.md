@@ -294,7 +294,7 @@ class MyStrategy extends BaseStrategy
 {
     public function shouldCache(Request $request, Response $response): bool
     {
-        if (! $this->isMethodCachable($request)) {
+        if (! $this->isCacheable($request)) {
             return false;
         }
 
