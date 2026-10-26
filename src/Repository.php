@@ -10,153 +10,156 @@ declare(strict_types=1);
 
 namespace Matchory\ResponseCache;
 
-use BadMethodCallException;
-use Illuminate\Cache\TaggableStore;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Contracts\Events\Dispatcher;
 use Matchory\ResponseCache\Events\Flush;
 use Psr\SimpleCache\InvalidArgumentException;
-use Symfony\Component\HttpFoundation\Response;
+use Random\RandomException;
+use RuntimeException;
+
+use function array_map;
+use function array_unique;
+use function array_values;
+use function bin2hex;
+use function random_bytes;
+use function sha1;
 
 /**
  * Cache Repository
  *
- * Responsible for cache persistence.
+ * Responsible for cache persistence. Every tag has a version, a random token
+ * stored under its own key; flushing a tag writes a new token, which makes all
+ * entries stamped with the previous one invalid.
  *
  * @bundle Matchory\ResponseCache
  */
 readonly class Repository
 {
+    protected const VERSION_KEY_PREFIX = 'response-cache:tag:';
+
+    /**
+     * Version key of the internal tag every entry carries. No sha1 output can
+     * equal it, so it never collides with a user tag.
+     */
+    protected const GLOBAL_VERSION_KEY = self::VERSION_KEY_PREFIX . '*';
+
     public function __construct(
         protected CacheRepository $store,
         protected Dispatcher $eventDispatcher,
+        protected int $tagTtl,
     ) {}
 
     /**
-     * Retrieves a response from the cache.
+     * Captures the current versions of the given tags and the global tag,
+     * creating those that don't exist yet.
      *
-     * @param  string[]|null  $tags
+     * @param  string[]  $tags
+     * @return Snapshot|null Snapshot, or `null` if a version could not be
+     *                       established.
      *
-     * @throws BadMethodCallException
      * @throws InvalidArgumentException
+     * @throws RandomException
      */
-    public function get(string $key, ?array $tags = null): ?Response
+    public function snapshot(array $tags): ?Snapshot
     {
-        $response = $this->getStore($tags)->get($key);
-
-        if (! $response) {
-            return null;
-        }
-
-        return $this->hydrate($response);
+        return $this->establish($this->store->many($this->versionKeys($tags)));
     }
 
     /**
-     * Deletes a cached response.
+     * Flushes the response cache by writing new versions for the given tags.
+     * Passing `null` flushes all entries, an empty array flushes nothing.
      *
      * @param  string[]|null  $tags
      *
-     * @throws BadMethodCallException
-     */
-    public function delete(string $key, ?array $tags = null): void
-    {
-        $this->getStore($tags)->forget($key);
-    }
-
-    /**
-     * Flushes the response cache.
-     *
-     * @param  string[]|null  $tags
-     *
-     * @throws BadMethodCallException
+     * @throws RandomException
+     * @throws RuntimeException If the store fails to write a version
      */
     public function flush(?array $tags = null): void
     {
-        // Not clear(): on tagged caches, it would flush the entire store
-        // @phpstan-ignore method.notFound (Illuminate\Cache\Repository proxies it to the store)
-        $this->getStore($tags)->flush();
+        if ($tags === []) {
+            return;
+        }
+
+        $keys = $tags === null
+            ? [self::GLOBAL_VERSION_KEY]
+            : array_map($this->versionKey(...), $tags);
+
+        foreach ($keys as $key) {
+            if (! $this->store->put($key, $this->newToken(), $this->tagTtl)) {
+                throw new RuntimeException(
+                    "Failed to write the response cache tag version '{$key}'",
+                );
+            }
+        }
 
         $this->eventDispatcher->dispatch(new Flush($tags));
     }
 
     /**
-     * Checks whether a response is cached.
+     * Completes a set of versions read from the store: missing versions are
+     * created and read again, so whichever token is stored wins. Existing
+     * versions are never overwritten here.
      *
-     * @param  string[]|null  $tags
+     * @param  array<string, string|null>  $versions  Version key → token
+     * @return Snapshot|null Snapshot, or `null` if a version is still missing.
      *
-     * @throws BadMethodCallException
      * @throws InvalidArgumentException
+     * @throws RandomException
      */
-    public function has(string $key, ?array $tags = null): bool
+    protected function establish(array $versions): ?Snapshot
     {
-        return $this->getStore($tags)->has($key);
+        $missing = [];
+
+        foreach ($versions as $key => $version) {
+            if ($version === null) {
+                $missing[] = $key;
+                $this->store->add($key, $this->newToken(), $this->tagTtl);
+            }
+        }
+
+        if ($missing !== []) {
+            foreach ($this->store->many($missing) as $key => $version) {
+                if ($version === null) {
+                    return null;
+                }
+
+                $versions[$key] = $version;
+            }
+        }
+
+        return new Snapshot($versions);
     }
 
     /**
-     * Puts a response into the cache.
+     * Retrieves the version keys for a set of tags, including the global tag.
      *
-     * @param  string[]|null  $tags
-     *
-     * @throws BadMethodCallException
+     * @param  string[]  $tags
+     * @return string[]
      */
-    public function put(
-        string $key,
-        Response $response,
-        ?array $tags = null,
-        ?int $ttl = null,
-    ): void {
-        $serialized = $this->serialize($response);
+    protected function versionKeys(array $tags): array
+    {
+        $keys = array_map($this->versionKey(...), $tags);
+        $keys[] = self::GLOBAL_VERSION_KEY;
 
-        $this->getStore($tags)->put($key, $serialized, $ttl);
+        return array_values(array_unique($keys));
     }
 
     /**
-     * Retrieves the store instance. If it supports tags, a tagged instance for
-     * the given tags will be returned, the untagged store otherwise.
-     *
-     * @param  string[]|null  $tags
-     *
-     * @throws BadMethodCallException
+     * Retrieves the version key of a tag. Hashing keeps keys of any tag within
+     * the key length limits of all stores.
      */
-    protected function getStore(?array $tags = null): CacheRepository
+    protected function versionKey(string $tag): string
     {
-        return $this->supportsTags()
-            // @phpstan-ignore method.notFound (guarded by supportsTags())
-            ? $this->store->tags($tags)
-            : $this->store;
+        return self::VERSION_KEY_PREFIX . sha1($tag);
     }
 
     /**
-     * Hydrates a serialized response. This method may be overridden by children
-     * implementations to add custom hydration mechanisms.
+     * Generates a new version token.
      *
-     * @param  mixed  $cached  Cached representation of the response.
-     * @return Response Hydrated response instance.
+     * @throws RandomException
      */
-    protected function hydrate(mixed $cached): Response
+    protected function newToken(): string
     {
-        return $cached;
-    }
-
-    /**
-     * Serializes the response. This method may be overridden by children
-     * implementations to add custom serialization mechanisms.
-     *
-     * @param  Response  $response  Response instance.
-     * @return mixed Serialized response representation.
-     *
-     * @noinspection PhpMixedReturnTypeCanBeReducedInspection
-     */
-    protected function serialize(Response $response): mixed
-    {
-        return $response;
-    }
-
-    /**
-     * Checks whether the store supports tags.
-     */
-    protected function supportsTags(): bool
-    {
-        return $this->store->getStore() instanceof TaggableStore;
+        return bin2hex(random_bytes(16));
     }
 }

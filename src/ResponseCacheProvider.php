@@ -10,10 +10,12 @@ declare(strict_types=1);
 
 namespace Matchory\ResponseCache;
 
+use Illuminate\Cache\FailoverStore;
 use Illuminate\Contracts\Cache\{Factory, Repository as CacheRepository};
 use Illuminate\Contracts\Config\Repository as Config;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
+use InvalidArgumentException;
 use LogicException;
 use Matchory\ResponseCache\Commands\ClearCacheCommand;
 use Matchory\ResponseCache\Contracts\CacheStrategy;
@@ -114,11 +116,23 @@ class ResponseCacheProvider extends ServiceProvider
         $this->app
             ->when(Repository::class)
             ->needs(CacheRepository::class)
-            ->give(
-                fn() => $this->app
-                ->make(Factory::class)
-                ->store(config('response-cache.store')),
-            );
+            ->give(function (): CacheRepository {
+                $store = $this->app
+                    ->make(Factory::class)
+                    ->store(config('response-cache.store'));
+
+                if ($store->getStore() instanceof FailoverStore) {
+                    throw new InvalidArgumentException(
+                        'The response cache does not support the failover cache store, because it can lose flushes during an outage.',
+                    );
+                }
+
+                return $store;
+            });
+        $this->app
+            ->when(Repository::class)
+            ->needs('$tagTtl')
+            ->give(fn(): int => (int) config('response-cache.tag_ttl'));
 
         $this->app->bind(Repository::class);
         $this->app->alias(

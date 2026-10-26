@@ -32,21 +32,32 @@ return [
     |--------------------------------------------------------------------------
     |
     | Here you may pass any cache store defined in your config/cache.php file.
-    | Please note that not all stores support tagging: For better control over
-    | and increased performance of your cache, we strongly recommend using a
-    | store with tag support, like Redis or APC.
+    | Tags work on every store. null uses your default cache store.
     |
     */
-    'store' => env('RESPONSE_CACHE_STORE', 'file'),
+    'store' => env('RESPONSE_CACHE_STORE'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Tag Version Time to Live
+    |--------------------------------------------------------------------------
+    |
+    | Every tag has a version, which is replaced when the tag is flushed. This
+    | setting specifies how long versions are kept, in seconds. Once a version
+    | expires, all responses carrying that tag are treated as stale, so cached
+    | responses never outlive it.
+    |
+    */
+    'tag_ttl' => env('RESPONSE_CACHE_TAG_TTL', 60 * 60 * 24 * 30),
 
     /*
     |--------------------------------------------------------------------------
     | Default Tags
     |--------------------------------------------------------------------------
     |
-    | If your store supports tags, all responses cached will also be tagged
-    | with these tags by default. Additional tags may be used depending on the
-    | middleware and strategy.
+    | All responses cached will also be tagged with these tags by default, so
+    | flushing one of them clears every response. Additional tags may be used
+    | depending on the middleware and strategy.
     |
     */
     'tags' => ($tags = env('RESPONSE_CACHE_TAGS'))
