@@ -356,7 +356,7 @@ class ResponseCache
 
             // Replace the matched expression (`{foo}`) with the value found in
             // the request inside the tag
-            $tag = str_replace($match, $value, $tag);
+            $tag = str_replace($match, (string) $value, $tag);
         }
 
         return $tag;

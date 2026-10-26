@@ -14,6 +14,8 @@ use Illuminate\Cache\ArrayStore;
 use Illuminate\Cache\Repository as CacheRepositoryImplementation;
 use Illuminate\Events\Dispatcher;
 use Illuminate\Http\Response;
+use Symfony\Component\HttpFoundation\Cookie;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\Support\Carbon;
 use Matchory\ResponseCache\Events\Flush;
 use Matchory\ResponseCache\Repository;
@@ -23,6 +25,7 @@ use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
 use function array_keys;
+use function serialize;
 use function str_repeat;
 
 #[CoversClass(Repository::class)]
@@ -183,7 +186,59 @@ class RepositoryTest extends TestCase
 
         $repository->put('key', $response, $lookup->snapshot, 60);
 
-        self::assertSame($response, $repository->lookup('key', ['users'])->response);
+        self::assertSame('foo', $repository->lookup('key', ['users'])->response?->getContent());
+    }
+
+    #[Test]
+    public function restoresStatusHeadersAndContent(): void
+    {
+        $repository = $this->createRepository();
+        $response = new Response('{"a":1}', 201, ['Content-Type' => 'application/json', 'X-Custom' => 'yes']);
+        $response->headers->setCookie(Cookie::create('flavor', 'oat'));
+        $repository->put('key', $response, $repository->lookup('key', [])->snapshot, 60);
+
+        $cached = $repository->lookup('key', [])->response;
+
+        self::assertInstanceOf(Response::class, $cached);
+        self::assertSame(201, $cached->getStatusCode());
+        self::assertSame('{"a":1}', $cached->getContent());
+        self::assertSame('application/json', $cached->headers->get('Content-Type'));
+        self::assertSame('yes', $cached->headers->get('X-Custom'));
+        self::assertSame('oat', $cached->headers->getCookies()[0]->getValue());
+    }
+
+    #[Test]
+    public function storesPlainDataOnly(): void
+    {
+        $repository = $this->createRepository();
+        $repository->put('key', new Response('foo'), $repository->lookup('key', [])->snapshot, 60);
+
+        // Stores that may not unserialize objects must still be able to read it
+        $stored = serialize($this->store->get('response-cache:entry:key'));
+
+        self::assertStringNotContainsString('O:', $stored);
+    }
+
+    #[Test]
+    public function doesNotCacheResponsesWithoutContent(): void
+    {
+        $repository = $this->createRepository();
+        $repository->put('key', new StreamedResponse(fn() => null), $repository->lookup('key', [])->snapshot, 60);
+
+        self::assertNull($repository->lookup('key', [])->response);
+    }
+
+    #[Test]
+    public function entriesInAnotherFormatMiss(): void
+    {
+        $repository = $this->createRepository();
+        $snapshot = $repository->lookup('key', [])->snapshot;
+        $this->store->put('response-cache:entry:key', [
+            'versions' => $snapshot->versions,
+            'response' => new Response('foo'),
+        ], 60);
+
+        self::assertNull($repository->lookup('key', [])->response);
     }
 
     #[Test]

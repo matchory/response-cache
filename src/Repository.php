@@ -13,6 +13,7 @@ namespace Matchory\ResponseCache;
 use Illuminate\Cache\FailoverStore;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Http\Response as CachedResponse;
 use Matchory\ResponseCache\Events\Flush;
 use InvalidArgumentException as InvalidConfigurationException;
 use Psr\SimpleCache\InvalidArgumentException;
@@ -24,6 +25,8 @@ use function array_map;
 use function bin2hex;
 use function count;
 use function is_array;
+use function is_int;
+use function is_string;
 use function iterator_to_array;
 use function min;
 use function random_bytes;
@@ -88,7 +91,7 @@ readonly class Repository
         [$entry, $versions] = $this->read($key, $tags);
 
         if ($this->isValid($entry, $versions)) {
-            return new Lookup($entry['response'], null);
+            return new Lookup($this->hydrate($entry), null);
         }
 
         return new Lookup(null, $this->establish($versions));
@@ -107,14 +110,18 @@ readonly class Repository
         [$entry, $versions] = $this->read($key, $tags);
 
         return $this->isValid($entry, $versions)
-            ? $entry['response']
+            ? $this->hydrate($entry)
             : null;
     }
 
     /**
      * Puts a response into the cache, stamped with the versions of a snapshot.
      * The entry expires after the tag TTL at the latest, as its versions
-     * expire by then.
+     * expire by then. Responses without content, like streamed responses or
+     * file downloads, are not cached.
+     * The response is stored as plain data, which works regardless of the
+     * cache's `serializable_classes` setting; on a hit, it is restored as an
+     * {@see CachedResponse} with the same status, headers, and content.
      *
      * @param  int|null  $ttl  Time-to-live in seconds, or `null` for the tag TTL
      */
@@ -124,9 +131,17 @@ readonly class Repository
         Snapshot $snapshot,
         ?int $ttl,
     ): void {
+        $content = $response->getContent();
+
+        if ($content === false) {
+            return;
+        }
+
         $this->store->put($this->entryKey($key), [
             'versions' => $snapshot->versions,
-            'response' => $response,
+            'status' => $response->getStatusCode(),
+            'headers' => $response->headers->allPreserveCase(),
+            'content' => $content,
         ], min($ttl ?? $this->tagTtl, $this->tagTtl));
     }
 
@@ -255,7 +270,9 @@ readonly class Repository
         if (
             ! is_array($entry)
             || ! is_array($entry['versions'] ?? null)
-            || ! ($entry['response'] ?? null) instanceof Response
+            || ! is_int($entry['status'] ?? null)
+            || ! is_array($entry['headers'] ?? null)
+            || ! is_string($entry['content'] ?? null)
             || count($entry['versions']) !== count($versions)
         ) {
             return false;
@@ -281,6 +298,20 @@ readonly class Repository
     protected function many(array $keys): array
     {
         return iterator_to_array($this->store->getMultiple($keys));
+    }
+
+    /**
+     * Restores a response from a valid entry.
+     *
+     * @param  array{status: int, headers: array<string, list<string|null>>, content: string}  $entry
+     */
+    protected function hydrate(array $entry): Response
+    {
+        return new CachedResponse(
+            $entry['content'],
+            $entry['status'],
+            $entry['headers'],
+        );
     }
 
     /**

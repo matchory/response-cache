@@ -92,8 +92,7 @@ Defaults to `60 * 60 * 24`, or exactly 24 hours.
 ### `store` (Environment variable: `RESPONSE_CACHE_STORE`)
 Here you may pass any cache store defined in your `config/cache.php` file. Tags work on every store, including `file`, `database` and `dynamodb`; the store
 does not need to support Laravel's cache tags. The `failover` store is not supported, because it can lose flushes during an outage (see
-[Limitations](#limitations)). Responses are stored as serialized objects, so if you restrict `serializable_classes` in `config/cache.php`, it must allow
-the response classes; otherwise, every lookup is a miss.
+[Limitations](#limitations)).
 
 Defaults to `null`, which uses your application's default cache store.
 
@@ -411,6 +410,9 @@ Version 2 replaces Laravel's cache tags with tag versioning. Existing cache entr
   is built, in place of the tags: `put($request, $response, $snapshot, $ttl)`. Take one with `snapshot($request, $tags)`, or use the one returned by
   `lookup($request, $tags)` on a miss. Either is `null` if the tag versions could not be established; don't cache the response then. `get()` and
   `lookup()` take a tags array (`[]` by default) instead of `null`. `delete()` no longer takes tags.
+- **Cached responses:** responses are stored as their status, headers and content, so caching works even if `serializable_classes` is restricted in
+  `config/cache.php` (the default in Laravel 13). A cached response is returned as an `Illuminate\Http\Response` with the same status, headers and
+  content, whatever class the original response had. Responses without content, such as streamed responses and file downloads, are not cached.
 - **`Repository`:** the methods `get()`, `has()`, `getStore()`, `supportsTags()`, `serialize()` and `hydrate()` were removed, along with custom
   serialization through a `Repository` subclass. Its constructor takes the tag TTL as a third argument.
 - **Configuration:** `store` defaults to `null` (your default cache store) instead of `file`. The new `tag_ttl` option sets how long tag versions are kept

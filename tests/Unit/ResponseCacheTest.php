@@ -70,8 +70,8 @@ class ResponseCacheTest extends TestCase
         self::assertNotNull($lookup->snapshot);
         $responseCache->put(Request::create('/'), $response, $lookup->snapshot);
         self::assertSame(
-            $response,
-            $responseCache->get(Request::create('/')),
+            'foo',
+            $responseCache->get(Request::create('/'))?->getContent(),
         );
     }
 
