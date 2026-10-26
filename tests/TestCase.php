@@ -2,6 +2,8 @@
 
 namespace Matchory\ResponseCache\Tests;
 
+use Illuminate\Contracts\Routing\UrlRoutable;
+use Illuminate\Routing\Middleware\SubstituteBindings;
 use InvalidArgumentException;
 use Matchory\ResponseCache\Http\Middleware\BypassCache;
 use Matchory\ResponseCache\Http\Middleware\CacheResponse;
@@ -39,6 +41,39 @@ abstract class TestCase extends BaseTestCase
             ->middleware(CacheResponse::class)
             ->middleware(BypassCache::class)
             ->name('bypass');
+
+        // Binds like an Eloquent model with an integer key
+        $router->bind('model', fn(string $value) => new class ((int) $value) implements UrlRoutable {
+            public function __construct(private readonly int $key) {}
+
+            public function getRouteKey(): int
+            {
+                return $this->key;
+            }
+
+            public function getRouteKeyName(): string
+            {
+                return 'id';
+            }
+
+            public function resolveRouteBinding($value, $field = null): ?self
+            {
+                return null;
+            }
+
+            public function resolveChildRouteBinding($childType, $value, $field): ?self
+            {
+                return null;
+            }
+        });
+        $router
+            ->get('/models/{model}', function () {
+                static $i = 0;
+
+                return ++$i;
+            })
+            ->middleware([SubstituteBindings::class, CacheResponse::class . ':models.{model}'])
+            ->name('models');
     }
 
     protected function getPackageProviders($app): array
