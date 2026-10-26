@@ -16,11 +16,15 @@ use Matchory\ResponseCache\Events\Flush;
 use Psr\SimpleCache\InvalidArgumentException;
 use Random\RandomException;
 use RuntimeException;
+use Symfony\Component\HttpFoundation\Response;
 
 use function array_map;
 use function array_unique;
 use function array_values;
 use function bin2hex;
+use function count;
+use function is_array;
+use function iterator_to_array;
 use function random_bytes;
 use function sha1;
 
@@ -35,6 +39,8 @@ use function sha1;
  */
 readonly class Repository
 {
+    protected const ENTRY_KEY_PREFIX = 'response-cache:entry:';
+
     protected const VERSION_KEY_PREFIX = 'response-cache:tag:';
 
     /**
@@ -50,6 +56,58 @@ readonly class Repository
     ) {}
 
     /**
+     * Looks up a cached response. It is only returned if every tag version it
+     * was stamped with is still current; otherwise, the lookup carries the
+     * snapshot to stamp a new entry with.
+     *
+     * @param  string[]  $tags
+     *
+     * @throws InvalidArgumentException
+     * @throws RandomException
+     */
+    public function lookup(string $key, array $tags): Lookup
+    {
+        $entryKey = $this->entryKey($key);
+        $versions = $this->many([
+            $entryKey,
+            ...$this->versionKeys($tags),
+        ]);
+        $entry = $versions[$entryKey];
+        unset($versions[$entryKey]);
+
+        if ($this->isValid($entry, $versions)) {
+            return new Lookup($entry['response'], null);
+        }
+
+        return new Lookup(null, $this->establish($versions));
+    }
+
+    /**
+     * Puts a response into the cache, stamped with the versions of a snapshot.
+     *
+     * @param  int|null  $ttl  Time-to-live in seconds, or `null` for no expiry
+     */
+    public function put(
+        string $key,
+        Response $response,
+        Snapshot $snapshot,
+        ?int $ttl,
+    ): void {
+        $this->store->put($this->entryKey($key), [
+            'versions' => $snapshot->versions,
+            'response' => $response,
+        ], $ttl);
+    }
+
+    /**
+     * Deletes a cached response.
+     */
+    public function delete(string $key): void
+    {
+        $this->store->forget($this->entryKey($key));
+    }
+
+    /**
      * Captures the current versions of the given tags and the global tag,
      * creating those that don't exist yet.
      *
@@ -62,7 +120,7 @@ readonly class Repository
      */
     public function snapshot(array $tags): ?Snapshot
     {
-        return $this->establish($this->store->many($this->versionKeys($tags)));
+        return $this->establish($this->many($this->versionKeys($tags)));
     }
 
     /**
@@ -118,7 +176,7 @@ readonly class Repository
         }
 
         if ($missing !== []) {
-            foreach ($this->store->many($missing) as $key => $version) {
+            foreach ($this->many($missing) as $key => $version) {
                 if ($version === null) {
                     return null;
                 }
@@ -128,6 +186,53 @@ readonly class Repository
         }
 
         return new Snapshot($versions);
+    }
+
+    /**
+     * Checks whether a stored entry is valid: it must have been stamped with
+     * exactly the current tags, and all of their versions must be unchanged.
+     *
+     * @param  array<string, string|null>  $versions  Current versions
+     */
+    protected function isValid(mixed $entry, array $versions): bool
+    {
+        if (
+            ! is_array($entry)
+            || ! is_array($entry['versions'] ?? null)
+            || ! ($entry['response'] ?? null) instanceof Response
+            || count($entry['versions']) !== count($versions)
+        ) {
+            return false;
+        }
+
+        foreach ($versions as $key => $version) {
+            if ($version === null || ($entry['versions'][$key] ?? null) !== $version) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Reads multiple keys in one call. Missing keys yield `null`.
+     *
+     * @param  string[]  $keys
+     * @return array<string, mixed>
+     *
+     * @throws InvalidArgumentException
+     */
+    protected function many(array $keys): array
+    {
+        return iterator_to_array($this->store->getMultiple($keys));
+    }
+
+    /**
+     * Retrieves the cache key of an entry.
+     */
+    protected function entryKey(string $key): string
+    {
+        return self::ENTRY_KEY_PREFIX . $key;
     }
 
     /**

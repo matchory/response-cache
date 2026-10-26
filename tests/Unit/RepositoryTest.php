@@ -13,6 +13,7 @@ namespace Matchory\ResponseCache\Tests\Unit;
 use Illuminate\Cache\ArrayStore;
 use Illuminate\Cache\Repository as CacheRepositoryImplementation;
 use Illuminate\Events\Dispatcher;
+use Illuminate\Http\Response;
 use Illuminate\Support\Carbon;
 use Matchory\ResponseCache\Events\Flush;
 use Matchory\ResponseCache\Repository;
@@ -165,6 +166,106 @@ class RepositoryTest extends TestCase
 
         self::assertNull($this->store->get($repository->versionKeyFor('users')));
         self::assertNotEquals($before, $repository->snapshot(['users']));
+    }
+
+    #[Test]
+    public function lookupMissesThenHits(): void
+    {
+        $repository = $this->createRepository();
+        $response = new Response('foo');
+        $lookup = $repository->lookup('key', ['users']);
+
+        self::assertNull($lookup->response);
+        self::assertNotNull($lookup->snapshot);
+
+        $repository->put('key', $response, $lookup->snapshot, 60);
+
+        self::assertSame($response, $repository->lookup('key', ['users'])->response);
+    }
+
+    #[Test]
+    public function flushInvalidatesEntry(): void
+    {
+        $repository = $this->createRepository();
+        $this->putEntry($repository, ['users', 'user:42']);
+        $repository->flush(['user:42']);
+
+        self::assertNull($repository->lookup('key', ['users', 'user:42'])->response);
+    }
+
+    #[Test]
+    public function flushAllInvalidatesEntryButNotForeignKeys(): void
+    {
+        $repository = $this->createRepository();
+        $this->store->put('foreign', 'x', 60);
+        $this->putEntry($repository, ['users']);
+        $repository->flush();
+
+        self::assertNull($repository->lookup('key', ['users'])->response);
+        self::assertSame('x', $this->store->get('foreign'));
+    }
+
+    #[Test]
+    public function staleSnapshotIsNeverValid(): void
+    {
+        $repository = $this->createRepository();
+        $lookup = $repository->lookup('key', ['users']);
+        $repository->flush(['users']);
+        $repository->put('key', new Response('foo'), $lookup->snapshot, 60);
+
+        self::assertNull($repository->lookup('key', ['users'])->response);
+    }
+
+    #[Test]
+    public function differentTagSetMisses(): void
+    {
+        $repository = $this->createRepository();
+        $this->putEntry($repository, ['a']);
+
+        self::assertNull($repository->lookup('key', ['a', 'b'])->response);
+    }
+
+    #[Test]
+    public function evictedVersionMisses(): void
+    {
+        $repository = $this->createRepository();
+        $lookup = $repository->lookup('key', ['users']);
+        $this->store->forget($repository->versionKeyFor('users'));
+        $repository->put('key', new Response('foo'), $lookup->snapshot, 60);
+
+        self::assertNull($repository->lookup('key', ['users'])->response);
+    }
+
+    #[Test]
+    public function entryOutlivingTagTtlMisses(): void
+    {
+        $repository = $this->createRepository();
+        $this->putEntry($repository, ['users'], self::TAG_TTL * 2);
+
+        Carbon::setTestNow(Carbon::now()->addSeconds(self::TAG_TTL + 1));
+
+        self::assertNull($repository->lookup('key', ['users'])->response);
+    }
+
+    #[Test]
+    public function deleteRemovesEntry(): void
+    {
+        $repository = $this->createRepository();
+        $this->putEntry($repository, ['users']);
+        $repository->delete('key');
+
+        self::assertNull($repository->lookup('key', ['users'])->response);
+    }
+
+    /**
+     * @param  string[]  $tags
+     */
+    private function putEntry(Repository $repository, array $tags, int $ttl = 60): void
+    {
+        $snapshot = $repository->lookup('key', $tags)->snapshot;
+        $repository->put('key', new Response('foo'), $snapshot, $ttl);
+
+        self::assertNotNull($repository->lookup('key', $tags)->response);
     }
 
     private function createRepository(): TestRepository
