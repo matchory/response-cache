@@ -141,7 +141,18 @@ class ResponseCacheProvider extends ServiceProvider
         $this->app
             ->when(Repository::class)
             ->needs('$tagTtl')
-            ->give(fn(): int => (int) config('response-cache.tag_ttl'));
+            ->give(function (): int {
+                $tagTtl = (int) config('response-cache.tag_ttl');
+
+                // Versions could never be created, so nothing would be cached
+                if ($tagTtl < 1) {
+                    throw new InvalidArgumentException(
+                        'The response cache tag_ttl must be at least one second.',
+                    );
+                }
+
+                return $tagTtl;
+            });
 
         $this->app->bind(Repository::class);
         $this->app->alias(

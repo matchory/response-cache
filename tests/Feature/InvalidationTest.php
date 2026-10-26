@@ -6,6 +6,7 @@ use Illuminate\Foundation\Auth\User;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Matchory\ResponseCache\Facades\ResponseCache;
 use RuntimeException;
@@ -51,6 +52,22 @@ it('flushes one tag without clearing others when default tags are set', function
 
     test()->get('/users/1')->assertContent('1');
     test()->get('/users/2')->assertContent('3');
+});
+
+it('parses the leading middleware argument as TTL and the rest as tags', function () {
+    test()->get('/users/1')->assertContent('1');
+    test()->get('/users/2')->assertContent('2');
+
+    ResponseCache::flush(['users']);
+
+    test()->get('/users/1')->assertContent('3');
+    test()->get('/users/2')->assertContent('4');
+
+    Carbon::setTestNow(Carbon::now()->addSeconds(61));
+
+    test()->get('/users/1')->assertContent('5');
+
+    Carbon::setTestNow();
 });
 
 it('deletes a URL with default tags configured', function () {
