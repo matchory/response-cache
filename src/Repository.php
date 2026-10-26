@@ -25,6 +25,7 @@ use function bin2hex;
 use function count;
 use function is_array;
 use function iterator_to_array;
+use function min;
 use function random_bytes;
 use function sha1;
 
@@ -101,8 +102,10 @@ readonly class Repository
 
     /**
      * Puts a response into the cache, stamped with the versions of a snapshot.
+     * The entry expires after the tag TTL at the latest, as its versions
+     * expire by then.
      *
-     * @param  int|null  $ttl  Time-to-live in seconds, or `null` for no expiry
+     * @param  int|null  $ttl  Time-to-live in seconds, or `null` for the tag TTL
      */
     public function put(
         string $key,
@@ -113,7 +116,7 @@ readonly class Repository
         $this->store->put($this->entryKey($key), [
             'versions' => $snapshot->versions,
             'response' => $response,
-        ], $ttl);
+        ], min($ttl ?? $this->tagTtl, $this->tagTtl));
     }
 
     /**

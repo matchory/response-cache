@@ -92,14 +92,15 @@ Defaults to `60 * 60 * 24`, or exactly 24 hours.
 ### `store` (Environment variable: `RESPONSE_CACHE_STORE`)
 Here you may pass any cache store defined in your `config/cache.php` file. Tags work on every store, including `file`, `database` and `dynamodb`; the store
 does not need to support Laravel's cache tags. The `failover` store is not supported, because it can lose flushes during an outage (see
-[Limitations](#limitations)).
+[Limitations](#limitations)). Responses are stored as serialized objects, so if you restrict `serializable_classes` in `config/cache.php`, it must allow
+the response classes; otherwise, every lookup is a miss.
 
 Defaults to `null`, which uses your application's default cache store.
 
 ### `tag_ttl` (Environment variable: `RESPONSE_CACHE_TAG_TTL`)
 Every tag has a version, which is replaced when the tag is flushed (see [Cache Tags](#cache-tags)). This setting specifies how long versions are kept, in
 seconds. Versions are never refreshed: once one expires, all responses carrying that tag become misses, and the next request starts a new version. Cached
-responses therefore never outlive `tag_ttl`, even if their own TTL is longer.
+responses therefore never outlive `tag_ttl`, even if their own TTL is longer, and responses cached without a TTL expire after `tag_ttl`.
 
 Defaults to `60 * 60 * 24 * 30`, or 30 days.
 
@@ -401,7 +402,8 @@ Version 2 replaces Laravel's cache tags with tag versioning. Existing cache entr
 - **Flushing:** invalidated responses are no longer deleted from the store; they expire with their TTL.
 - **`ResponseCache` methods:** `has()` was removed; use `get()` or `lookup()`. `put()` requires a `Snapshot` of the tag versions, taken before the response
   is built, in place of the tags: `put($request, $response, $snapshot, $ttl)`. Take one with `snapshot($request, $tags)`, or use the one returned by
-  `lookup($request, $tags)` on a miss. `get()` and `lookup()` take a tags array (`[]` by default) instead of `null`. `delete()` no longer takes tags.
+  `lookup($request, $tags)` on a miss. Either is `null` if the tag versions could not be established; don't cache the response then. `get()` and
+  `lookup()` take a tags array (`[]` by default) instead of `null`. `delete()` no longer takes tags.
 - **`Repository`:** the methods `get()`, `has()`, `getStore()`, `supportsTags()`, `serialize()` and `hydrate()` were removed, along with custom
   serialization through a `Repository` subclass. Its constructor takes the tag TTL as a third argument.
 - **Configuration:** `store` defaults to `null` (your default cache store) instead of `file`. The new `tag_ttl` option sets how long tag versions are kept

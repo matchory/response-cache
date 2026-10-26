@@ -176,6 +176,22 @@ class ResponseCacheTest extends TestCase
         );
     }
 
+    #[Test]
+    public function acceptsTtlFromEnvironmentAsString(): void
+    {
+        $responseCache = $this->createResponseCache([
+            'response-cache.ttl' => '42',
+        ]);
+        $request = Request::create('/');
+        $responseCache->put(
+            $request,
+            new Response('foo'),
+            $responseCache->snapshot($request),
+        );
+
+        self::assertNotNull($responseCache->get(Request::create('/')));
+    }
+
     /**
      * @param  array<string, mixed>|null  $values
      * @return callable(): Config

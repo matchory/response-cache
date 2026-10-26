@@ -251,6 +251,18 @@ class RepositoryTest extends TestCase
     }
 
     #[Test]
+    public function entryWithoutTtlExpiresWithTagTtl(): void
+    {
+        $repository = $this->createRepository();
+        $snapshot = $repository->lookup('key', ['users'])->snapshot;
+        $repository->put('key', new Response('foo'), $snapshot, null);
+
+        Carbon::setTestNow(Carbon::now()->addSeconds(self::TAG_TTL + 1));
+
+        self::assertNull($this->store->get('response-cache:entry:key'));
+    }
+
+    #[Test]
     public function deleteRemovesEntry(): void
     {
         $repository = $this->createRepository();

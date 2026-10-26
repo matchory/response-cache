@@ -272,7 +272,10 @@ class ResponseCache
      */
     protected function getDefaultTtl(): ?int
     {
-        return $this->config()->get('response-cache.ttl');
+        $ttl = $this->config()->get('response-cache.ttl');
+
+        // Values from the environment are strings
+        return $ttl === null ? null : (int) $ttl;
     }
 
     /**
