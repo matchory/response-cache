@@ -13,7 +13,7 @@ namespace Matchory\ResponseCache\Support;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Database\DatabaseTransactionRecord;
-use Illuminate\Database\DatabaseTransactionsManager;
+use Illuminate\Support\Collection;
 use Throwable;
 
 /**
@@ -35,12 +35,7 @@ readonly class AfterTransactions
 
     public function __invoke(callable $callback): void
     {
-        // The manager is resolved on every call, never once, for Octane
-        $manager = $this->container->bound('db.transactions')
-            ? $this->container->make('db.transactions')
-            : null;
-
-        $transaction = $manager?->getPendingTransactions()->last();
+        $transaction = $this->openTransactions()->last();
 
         if ($transaction === null) {
             $callback();
@@ -48,7 +43,7 @@ readonly class AfterTransactions
             return;
         }
 
-        $this->defer($manager, $transaction, $callback);
+        $this->defer($transaction, $callback);
     }
 
     /**
@@ -56,20 +51,14 @@ readonly class AfterTransactions
      * still open at that point have ended, and so on.
      */
     protected function defer(
-        DatabaseTransactionsManager $manager,
         DatabaseTransactionRecord $transaction,
         callable $callback,
     ): void {
-        $ended = function () use ($manager, $transaction, $callback): void {
-            // When a transaction is rolled back entirely, its callbacks run
-            // before it is removed from the pending transactions
-            $next = $manager->getPendingTransactions()
-                ->reject(fn(DatabaseTransactionRecord $pending) => $pending->connection === $transaction->connection
-                    && $pending->level >= $transaction->level)
-                ->last();
+        $ended = function () use ($callback): void {
+            $next = $this->openTransactions()->last();
 
             if ($next !== null) {
-                $this->defer($manager, $next, $callback);
+                $this->defer($next, $callback);
 
                 return;
             }
@@ -83,5 +72,31 @@ readonly class AfterTransactions
 
         $transaction->addCallback($ended);
         $transaction->addCallbackForRollback($ended);
+    }
+
+    /**
+     * Retrieves the transactions that are still open. Laravel lowers a
+     * connection's transaction level before it runs commit or rollback
+     * callbacks, or when a commit fails, but may still list the transaction
+     * as pending then. Transactions opened by testing traits are excluded.
+     *
+     * @return Collection<int, DatabaseTransactionRecord>
+     */
+    protected function openTransactions(): Collection
+    {
+        // Resolved on every call, never once, for Octane
+        if (! $this->container->bound('db.transactions')) {
+            return new Collection();
+        }
+
+        $database = $this->container->make('db');
+
+        return $this->container
+            ->make('db.transactions')
+            ->callbackApplicableTransactions()
+            ->filter(fn(DatabaseTransactionRecord $transaction) => $database
+                ->connection($transaction->connection)
+                ->transactionLevel() >= $transaction->level)
+            ->values();
     }
 }

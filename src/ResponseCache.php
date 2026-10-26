@@ -144,11 +144,13 @@ class ResponseCache
      */
     public function enabled(): bool
     {
-        // Values from the environment may be strings
+        // Values from the environment may be strings; unset or unrecognized
+        // values keep the default
         return filter_var(
-            $this->config()->get('response-cache.enabled', true),
+            $this->config()->get('response-cache.enabled') ?? true,
             FILTER_VALIDATE_BOOLEAN,
-        );
+            FILTER_NULL_ON_FAILURE,
+        ) ?? true;
     }
 
     /**

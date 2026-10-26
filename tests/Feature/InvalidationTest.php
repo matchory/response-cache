@@ -185,6 +185,36 @@ it('waits for the parent when a nested transaction rolls back', function () {
     test()->get('/users/1')->assertContent('2');
 });
 
+it('flushes when a rollback callback flushes', function () {
+    test()->get('/users/1')->assertContent('1');
+
+    try {
+        DB::transaction(function () {
+            DB::afterRollBack(fn() => ResponseCache::flush(['users']));
+
+            throw new RuntimeException('Rollback');
+        });
+    } catch (RuntimeException) {
+    }
+
+    test()->get('/users/1')->assertContent('2');
+});
+
+it('does not defer flushes to a transaction whose commit failed', function () {
+    test()->get('/users/1')->assertContent('1');
+
+    // Laravel lowers the transaction level when a commit fails, but leaves the
+    // transaction pending in its manager
+    try {
+        DB::transaction(fn($connection) => $connection->getPdo()->rollBack());
+    } catch (\PDOException) {
+    }
+
+    ResponseCache::flush(['users']);
+
+    test()->get('/users/1')->assertContent('2');
+});
+
 it('reports a failed deferred flush without breaking the commit', function () {
     Exceptions::fake();
     Cache::extend('rejecting', fn() => new Repository(new class extends ArrayStore {

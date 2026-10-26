@@ -388,6 +388,9 @@ Tag versioning never serves a response after a flush that it knows about, but so
   which makes it a hot partition.
 - **Local stores.** The `file` and `apc` stores are local to a host, and the `array` store to a process. A flush only reaches the host or worker that runs
   it, so use them on a single host only.
+- **Failed commits.** Laravel runs no after-commit or rollback callbacks when a commit itself fails, and none after an earlier callback of the same
+  transaction throws. A flush deferred in such a transaction is skipped, just like your other after-commit callbacks. A failed commit normally means the
+  database rolled the transaction back, so nothing changed; only a connection lost during the commit leaves it unknown whether the data was written.
 - **Hit rate.** Flushing a broad tag like `users` on every write keeps all responses carrying it cold on write-heavy tables, and flushing everything after a
   deployment causes a burst of misses. The same burst happens every `tag_ttl` (30 days by default) after the first response was cached, when the version
   of the internal global tag expires. There is no lock against many requests rebuilding the same response at once.

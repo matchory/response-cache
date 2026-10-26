@@ -204,6 +204,18 @@ class ResponseCacheTest extends TestCase
         }
     }
 
+    #[Test]
+    public function treatsUnsetOrInvalidEnabledAsEnabled(): void
+    {
+        foreach ([null, 'banana'] as $value) {
+            $responseCache = $this->createResponseCache([
+                'response-cache.enabled' => $value,
+            ]);
+
+            self::assertTrue($responseCache->enabled());
+        }
+    }
+
     /**
      * @param  array<string, mixed>|null  $values
      * @return callable(): Config
