@@ -413,8 +413,8 @@ Version 2 replaces Laravel's cache tags with tag versioning. Existing cache entr
 - **Cached responses:** responses are stored as their status, headers and content, so caching works even if `serializable_classes` is restricted in
   `config/cache.php` (the default in Laravel 13). A cached response is returned as an `Illuminate\Http\Response` with the same status, headers and
   content, whatever class the original response had. Responses without content, such as streamed responses and file downloads, are not cached.
-- **`Repository`:** the methods `get()`, `has()`, `getStore()`, `supportsTags()`, `serialize()` and `hydrate()` were removed, along with custom
-  serialization through a `Repository` subclass. Its constructor takes the tag TTL as a third argument.
+- **`Repository`:** `has()`, `getStore()`, `supportsTags()` and `serialize()` were removed, along with custom serialization through a `Repository`
+  subclass. `get()`, `put()` and `delete()` have new signatures. Its constructor takes the tag TTL as a third argument.
 - **Configuration:** `store` defaults to `null` (your default cache store) instead of `file`. The new `tag_ttl` option sets how long tag versions are kept
   (30 days by default) and must be at least one second. The `failover` cache store is refused with an `InvalidArgumentException`.
 - **Stores:** tags work on every cache store; a store with tag support is no longer needed.
