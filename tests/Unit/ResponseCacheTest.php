@@ -91,11 +91,11 @@ class ResponseCacheTest extends TestCase
      * @throws BadRequestException
      */
     #[Test]
-    public function flushIsDeferredThroughAfterCommit(): void
+    public function flushIsDeferredUntilTransactionsEnd(): void
     {
         $deferred = [];
         $responseCache = $this->createResponseCache(
-            afterCommit: static function (callable $callback) use (&$deferred) {
+            afterTransactions: static function (callable $callback) use (&$deferred) {
                 $deferred[] = $callback;
             },
         );
@@ -129,7 +129,7 @@ class ResponseCacheTest extends TestCase
     {
         $deferred = [];
         $responseCache = $this->createResponseCache(
-            afterCommit: static function (callable $callback) use (&$deferred) {
+            afterTransactions: static function (callable $callback) use (&$deferred) {
                 $deferred[] = $callback;
             },
         );
@@ -190,6 +190,18 @@ class ResponseCacheTest extends TestCase
         );
 
         self::assertNotNull($responseCache->get(Request::create('/')));
+    }
+
+    #[Test]
+    public function acceptsEnabledFromEnvironmentAsString(): void
+    {
+        foreach (['1' => true, 'on' => true, '0' => false, 'off' => false] as $value => $expected) {
+            $responseCache = $this->createResponseCache([
+                'response-cache.enabled' => (string) $value,
+            ]);
+
+            self::assertSame($expected, $responseCache->enabled());
+        }
     }
 
     /**
@@ -271,7 +283,7 @@ class ResponseCacheTest extends TestCase
      */
     private function createResponseCache(
         ?array $config = null,
-        ?callable $afterCommit = null,
+        ?callable $afterTransactions = null,
     ): ResponseCache {
         $config ??= [
             'response-cache.enabled' => true,
@@ -284,11 +296,11 @@ class ResponseCacheTest extends TestCase
         $cache = $this->createRepository();
         $strategy = $this->createStrategy();
 
-        $afterCommit ??= static fn(callable $callback) => $callback();
+        $afterTransactions ??= static fn(callable $callback) => $callback();
 
         return new ResponseCache(
             $configResolver,
-            $afterCommit,
+            $afterTransactions,
             $urlGenerator,
             $cache,
             $strategy,

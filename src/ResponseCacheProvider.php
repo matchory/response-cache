@@ -17,6 +17,7 @@ use Illuminate\Support\ServiceProvider;
 use LogicException;
 use Matchory\ResponseCache\Commands\ClearCacheCommand;
 use Matchory\ResponseCache\Contracts\CacheStrategy;
+use Matchory\ResponseCache\Support\AfterTransactions;
 use Matchory\ResponseCache\Support\BaseStrategy;
 
 use function config;
@@ -79,14 +80,11 @@ class ResponseCacheProvider extends ServiceProvider
                 'config',
             ));
 
-        // Flushes are deferred until the current database transaction commits.
-        // The transaction manager is resolved on every call, never once.
+        // Flushes are deferred until all open database transactions have ended
         $this->app
             ->when(ResponseCache::class)
-            ->needs('$afterCommit')
-            ->give(fn(Application $app) => static fn(callable $callback) => $app->bound('db.transactions')
-                ? $app->make('db.transactions')->addCallback($callback)
-                : $callback());
+            ->needs('$afterTransactions')
+            ->give(fn(Application $app) => new AfterTransactions($app));
     }
 
     protected function registerCommands(): void

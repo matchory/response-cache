@@ -2,12 +2,16 @@
 
 namespace Matchory\ResponseCache\Tests\Feature;
 
+use Illuminate\Cache\ArrayStore;
+use Illuminate\Cache\Repository;
 use Illuminate\Foundation\Auth\User;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Exceptions;
 use Matchory\ResponseCache\Facades\ResponseCache;
 use RuntimeException;
 
@@ -100,7 +104,7 @@ it('flushes after commit', function () {
     test()->get('/users/1')->assertContent('2');
 });
 
-it('drops the flush on rollback', function () {
+it('flushes after rollback', function () {
     test()->get('/users/1')->assertContent('1');
 
     try {
@@ -112,7 +116,121 @@ it('drops the flush on rollback', function () {
     } catch (RuntimeException) {
     }
 
+    test()->get('/users/1')->assertContent('2');
+});
+
+it('flushes when an unrelated transaction rolls back', function () {
     test()->get('/users/1')->assertContent('1');
+
+    // The data was written outside the transaction that is open on another
+    // connection, so rolling that one back must not lose the flush
+    try {
+        DB::connection('other')->transaction(function () {
+            ResponseCache::flush(['users']);
+
+            test()->get('/users/1')->assertContent('1');
+
+            throw new RuntimeException('Rollback');
+        });
+    } catch (RuntimeException) {
+    }
+
+    test()->get('/users/1')->assertContent('2');
+});
+
+it('flushes once transactions on all connections have ended', function () {
+    test()->get('/users/1')->assertContent('1');
+
+    DB::transaction(function () {
+        DB::connection('other')->transaction(function () {
+            ResponseCache::flush(['users']);
+        });
+
+        test()->get('/users/1')->assertContent('1');
+    });
+
+    test()->get('/users/1')->assertContent('2');
+});
+
+it('flushes after a nested transaction commits with its parent', function () {
+    test()->get('/users/1')->assertContent('1');
+
+    DB::transaction(function () {
+        DB::transaction(function () {
+            ResponseCache::flush(['users']);
+        });
+
+        test()->get('/users/1')->assertContent('1');
+    });
+
+    test()->get('/users/1')->assertContent('2');
+});
+
+it('waits for the parent when a nested transaction rolls back', function () {
+    test()->get('/users/1')->assertContent('1');
+
+    DB::transaction(function () {
+        try {
+            DB::transaction(function () {
+                ResponseCache::flush(['users']);
+
+                throw new RuntimeException('Rollback');
+            });
+        } catch (RuntimeException) {
+        }
+
+        test()->get('/users/1')->assertContent('1');
+    });
+
+    test()->get('/users/1')->assertContent('2');
+});
+
+it('reports a failed deferred flush without breaking the commit', function () {
+    Exceptions::fake();
+    Cache::extend('rejecting', fn() => new Repository(new class extends ArrayStore {
+        public function put($key, $value, $seconds)
+        {
+            return false;
+        }
+    }));
+    $this->app['config']->set('cache.stores.rejecting', ['driver' => 'rejecting']);
+    $this->app['config']->set('response-cache.store', 'rejecting');
+    $committed = false;
+
+    DB::transaction(function () use (&$committed) {
+        ResponseCache::flush(['users']);
+
+        DB::afterCommit(function () use (&$committed) {
+            $committed = true;
+        });
+    });
+
+    expect($committed)->toBeTrue();
+    Exceptions::assertReported(RuntimeException::class);
+});
+
+it('throws a failed flush outside transactions', function () {
+    Cache::extend('rejecting', fn() => new Repository(new class extends ArrayStore {
+        public function put($key, $value, $seconds)
+        {
+            return false;
+        }
+    }));
+    $this->app['config']->set('cache.stores.rejecting', ['driver' => 'rejecting']);
+    $this->app['config']->set('response-cache.store', 'rejecting');
+
+    ResponseCache::flush(['users']);
+})->throws(RuntimeException::class);
+
+it('does not write to the store when reading', function () {
+    expect(ResponseCache::get(Request::create('/cached')))->toBeNull();
+
+    $keys = array_filter(
+        array_keys(Cache::store('array')->getStore()->all()),
+        static fn(string $key) => str_starts_with($key, 'response-cache:'),
+    );
+
+    expect($keys)->toBe([]);
 });
 
 it('flushes every audience and query variant', function () {

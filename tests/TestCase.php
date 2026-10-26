@@ -94,5 +94,9 @@ abstract class TestCase extends BaseTestCase
             'driver' => 'sqlite',
             'database' => ':memory:',
         ]);
+        $app['config']->set('database.connections.other', [
+            'driver' => 'sqlite',
+            'database' => ':memory:',
+        ]);
     }
 }

@@ -85,19 +85,30 @@ readonly class Repository
      */
     public function lookup(string $key, array $tags): Lookup
     {
-        $entryKey = $this->entryKey($key);
-        $versions = $this->many([
-            $entryKey,
-            ...$this->versionKeys($tags),
-        ]);
-        $entry = $versions[$entryKey];
-        unset($versions[$entryKey]);
+        [$entry, $versions] = $this->read($key, $tags);
 
         if ($this->isValid($entry, $versions)) {
             return new Lookup($entry['response'], null);
         }
 
         return new Lookup(null, $this->establish($versions));
+    }
+
+    /**
+     * Retrieves a cached response if every tag version it was stamped with is
+     * still current. Unlike {@see lookup()}, this never writes to the store.
+     *
+     * @param  string[]  $tags
+     *
+     * @throws InvalidArgumentException
+     */
+    public function get(string $key, array $tags): ?Response
+    {
+        [$entry, $versions] = $this->read($key, $tags);
+
+        return $this->isValid($entry, $versions)
+            ? $entry['response']
+            : null;
     }
 
     /**
@@ -210,6 +221,27 @@ readonly class Repository
         }
 
         return new Snapshot($versions);
+    }
+
+    /**
+     * Reads an entry and the current versions of its tags in one call.
+     *
+     * @param  string[]  $tags
+     * @return array{mixed, array<string, string|null>} Entry and versions
+     *
+     * @throws InvalidArgumentException
+     */
+    protected function read(string $key, array $tags): array
+    {
+        $entryKey = $this->entryKey($key);
+        $versions = $this->many([
+            $entryKey,
+            ...$this->versionKeys($tags),
+        ]);
+        $entry = $versions[$entryKey];
+        unset($versions[$entryKey]);
+
+        return [$entry, $versions];
     }
 
     /**

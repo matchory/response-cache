@@ -170,9 +170,12 @@ happens to be empty can never clear the whole cache.
 Flushing is cheap: it writes one small cache key per tag, so it's safe to call many times from observers. Invalidated responses are not deleted; they stay in
 the store until their TTL expires. If you need the space back immediately, run `php artisan cache:clear` on that store.
 
-**Flushes run after the database transaction commits.** If you flush inside a transaction, the flush is deferred until it commits, so other requests can't
-cache the old data in the meantime. If the transaction rolls back, the flush never happens, since the data didn't change. Outside a transaction, the flush
-runs immediately. If the cache store fails to write a flush, `flush()` throws a `RuntimeException`.
+**Flushes run after database transactions end.** If you flush while a transaction is open, the flush is deferred until every open transaction, on every
+connection, has ended, so other requests can't cache uncommitted data in the meantime. The flush runs after a rollback, too, since the data may have been
+written outside that transaction or on another connection; that only costs some cache misses. Outside a transaction, the flush runs immediately.
+
+If the cache store fails to write a flush, `flush()` throws a `RuntimeException`. A deferred flush runs while Laravel finishes the transaction, so a failure
+there is reported to your exception handler instead, and the rest of your after-commit callbacks still run.
 
 To be more selective, use the `delete` method:
 
@@ -386,7 +389,8 @@ Tag versioning never serves a response after a flush that it knows about, but so
 - **Local stores.** The `file` and `apc` stores are local to a host, and the `array` store to a process. A flush only reaches the host or worker that runs
   it, so use them on a single host only.
 - **Hit rate.** Flushing a broad tag like `users` on every write keeps all responses carrying it cold on write-heavy tables, and flushing everything after a
-  deployment causes a burst of misses. There is no lock against many requests rebuilding the same response at once.
+  deployment causes a burst of misses. The same burst happens every `tag_ttl` (30 days by default) after the first response was cached, when the version
+  of the internal global tag expires. There is no lock against many requests rebuilding the same response at once.
 
 Upgrading to v2
 ---------------
@@ -397,8 +401,8 @@ Version 2 replaces Laravel's cache tags with tag versioning. Existing cache entr
 - **Events:** requests rejected by `isCacheable` (by default, anything but `GET` and `HEAD`) no longer emit a `Miss` event.
 - **Flushing:** `ResponseCache::flush($tags)` no longer adds the default tags, so it flushes exactly the given tags. `flush([])` now does nothing; use
   `flush()` to flush everything.
-- **Flushing:** flushes inside a database transaction run after it commits, and are dropped if it rolls back.
-- **Flushing:** `flush()` throws a `RuntimeException` if the cache store fails to write.
+- **Flushing:** flushes while a database transaction is open run once all open transactions have ended, whether they commit or roll back.
+- **Flushing:** `flush()` throws a `RuntimeException` if the cache store fails to write. Failures of deferred flushes are reported to the exception handler.
 - **Flushing:** invalidated responses are no longer deleted from the store; they expire with their TTL.
 - **`ResponseCache` methods:** `has()` was removed; use `get()` or `lookup()`. `put()` requires a `Snapshot` of the tag versions, taken before the response
   is built, in place of the tags: `put($request, $response, $snapshot, $ttl)`. Take one with `snapshot($request, $tags)`, or use the one returned by

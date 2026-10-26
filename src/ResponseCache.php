@@ -27,6 +27,7 @@ use function array_map;
 use function array_merge;
 use function array_unique;
 use function array_values;
+use function filter_var;
 use function is_scalar;
 use function preg_match_all;
 use function sprintf;
@@ -45,27 +46,28 @@ class ResponseCache
     /**
      * @var Closure(callable): void
      */
-    private readonly Closure $afterCommit;
+    private readonly Closure $afterTransactions;
 
     /**
      * Creates a new response cache instance.
      *
      * @param callable(): Config       $configResolver
-     * @param callable(callable): void $afterCommit    Runs a callback once the
-     *                                                 current database
-     *                                                 transaction commits
+     * @param callable(callable): void $afterTransactions Runs a callback once
+     *                                                    all open database
+     *                                                    transactions have
+     *                                                    ended
      *
      * @internal Should only be invoked by the DI container
      */
     public function __construct(
         callable $configResolver,
-        callable $afterCommit,
+        callable $afterTransactions,
         protected readonly UrlGenerator $urlGenerator,
         protected readonly Repository $cache,
         protected readonly CacheStrategy $strategy,
     ) {
         $this->configResolver = $configResolver(...);
-        $this->afterCommit = $afterCommit(...);
+        $this->afterTransactions = $afterTransactions(...);
     }
 
     /**
@@ -106,11 +108,13 @@ class ResponseCache
      * @return Response|null Response if cached, `null` otherwise
      *
      * @throws InvalidArgumentException
-     * @throws RandomException
      */
     public function get(Request $request, array $tags = []): ?Response
     {
-        return $this->lookup($request, $tags)->response;
+        return $this->cache->get(
+            $this->strategy->key($request),
+            $this->resolveTags($tags, $request),
+        );
     }
 
     /**
@@ -140,19 +144,24 @@ class ResponseCache
      */
     public function enabled(): bool
     {
-        return $this->config()->get('response-cache.enabled', true);
+        // Values from the environment may be strings
+        return filter_var(
+            $this->config()->get('response-cache.enabled', true),
+            FILTER_VALIDATE_BOOLEAN,
+        );
     }
 
     /**
-     * Flushes all cached items, or all items with one or more tags. If a
-     * database transaction is open, the flush runs once it commits, and not at
-     * all if it rolls back.
+     * Flushes all cached items, or all items with one or more tags. If database
+     * transactions are open, the flush runs once all of them have ended; if it
+     * fails then, the exception is reported instead of thrown.
      *
      * @param string[]|null $tags Tags to flush. Pass `null` to flush all
      *                            items; an empty array flushes nothing.
      *
      * @throws RandomException
-     * @throws RuntimeException If the store fails to write a tag version
+     * @throws RuntimeException If the store fails to write a tag version while
+     *                          no transaction is open
      */
     public function flush(?array $tags = null): void
     {
@@ -160,7 +169,7 @@ class ResponseCache
             return;
         }
 
-        ($this->afterCommit)(fn() => $this->cache->flush($tags));
+        ($this->afterTransactions)(fn() => $this->cache->flush($tags));
     }
 
     /**
