@@ -17,6 +17,7 @@ use Illuminate\Support\ServiceProvider;
 use LogicException;
 use Matchory\ResponseCache\Commands\ClearCacheCommand;
 use Matchory\ResponseCache\Contracts\CacheStrategy;
+use Matchory\ResponseCache\Support\AfterTransactions;
 use Matchory\ResponseCache\Support\BaseStrategy;
 
 use function config;
@@ -78,6 +79,12 @@ class ResponseCacheProvider extends ServiceProvider
             ->give(fn(Application $app) => static fn(): Config => $app->make(
                 'config',
             ));
+
+        // Flushes are deferred until all open database transactions have ended
+        $this->app
+            ->when(ResponseCache::class)
+            ->needs('$afterTransactions')
+            ->give(fn(Application $app) => new AfterTransactions($app));
     }
 
     protected function registerCommands(): void
@@ -119,6 +126,10 @@ class ResponseCacheProvider extends ServiceProvider
                 ->make(Factory::class)
                 ->store(config('response-cache.store')),
             );
+        $this->app
+            ->when(Repository::class)
+            ->needs('$tagTtl')
+            ->give(fn(): int => (int) config('response-cache.tag_ttl'));
 
         $this->app->bind(Repository::class);
         $this->app->alias(

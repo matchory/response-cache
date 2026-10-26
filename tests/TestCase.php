@@ -2,8 +2,11 @@
 
 namespace Matchory\ResponseCache\Tests;
 
+use Illuminate\Contracts\Routing\UrlRoutable;
+use Illuminate\Routing\Middleware\SubstituteBindings;
 use InvalidArgumentException;
 use Matchory\ResponseCache\Http\Middleware\BypassCache;
+use Matchory\ResponseCache\Facades\ResponseCache;
 use Matchory\ResponseCache\Http\Middleware\CacheResponse;
 use Matchory\ResponseCache\ResponseCacheProvider;
 use Orchestra\Testbench\TestCase as BaseTestCase;
@@ -47,6 +50,67 @@ abstract class TestCase extends BaseTestCase
             })
             ->middleware(CacheResponse::class . ':items.{item},filter.{filter}')
             ->name('tagged');
+        // Binds like an Eloquent model with an integer key
+        $router->bind('model', fn(string $value) => new class ((int) $value) implements UrlRoutable {
+            public function __construct(private readonly int $key) {}
+
+            public function getRouteKey(): int
+            {
+                return $this->key;
+            }
+
+            public function getRouteKeyName(): string
+            {
+                return 'id';
+            }
+
+            public function resolveRouteBinding($value, $field = null): ?self
+            {
+                return null;
+            }
+
+            public function resolveChildRouteBinding($childType, $value, $field): ?self
+            {
+                return null;
+            }
+        });
+        $router
+            ->get('/models/{model}', function () {
+                static $i = 0;
+
+                return ++$i;
+            })
+            ->middleware([SubstituteBindings::class, CacheResponse::class . ':models.{model}'])
+            ->name('models');
+        $router
+            ->get('/users/{user}', function () {
+                static $i = 0;
+
+                return ++$i;
+            })
+            ->middleware(CacheResponse::class . ':60,users,user:{user}')
+            ->name('users.show');
+        $router
+            ->get('/racing', function () {
+                static $i = 0;
+
+                // Simulates a write that flushes while the response is built
+                if (++$i === 1) {
+                    ResponseCache::flush(['race']);
+                }
+
+                return $i;
+            })
+            ->middleware(CacheResponse::class . ':race')
+            ->name('racing');
+        $router
+            ->post('/cached-post', function () {
+                static $i = 0;
+
+                return ++$i;
+            })
+            ->middleware(CacheResponse::class)
+            ->name('cached-post');
     }
 
     protected function getPackageProviders($app): array
@@ -59,5 +123,14 @@ abstract class TestCase extends BaseTestCase
     protected function defineEnvironment($app): void
     {
         $app['config']->set('response-cache.store', 'array');
+        $app['config']->set('database.default', 'testing');
+        $app['config']->set('database.connections.testing', [
+            'driver' => 'sqlite',
+            'database' => ':memory:',
+        ]);
+        $app['config']->set('database.connections.other', [
+            'driver' => 'sqlite',
+            'database' => ':memory:',
+        ]);
     }
 }

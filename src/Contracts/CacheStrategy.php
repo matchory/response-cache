@@ -26,17 +26,22 @@ interface CacheStrategy
     public function key(Request $request): string;
 
     /**
+     * Determines, before a response exists, whether a request may be served
+     * from or stored in the cache.
+     */
+    public function isCacheable(Request $request): bool;
+
+    /**
      * Determines whether the response should be cached.
      */
     public function shouldCache(Request $request, Response $response): bool;
 
     /**
-     * Generates a list of tags for a request. If the cache is missed, this
-     * method will be invoked with the generated response passed, providing an
-     * opportunity to add tags dependent on the generated response, for example
-     * the ID of a customer associated to the request, or similar.
+     * Generates a list of tags for a request. Tags must be derivable from the
+     * request alone, as they are needed to look up a cached response before
+     * any response exists.
      *
      * @return string[]
      */
-    public function tags(Request $request, ?Response $response = null): array;
+    public function tags(Request $request): array;
 }

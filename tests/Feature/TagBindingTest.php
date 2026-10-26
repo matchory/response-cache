@@ -22,6 +22,16 @@ it('resolves route parameters in tags', function () {
     test()->get('/tagged/2')->assertContent('3');
 });
 
+it('resolves bound models with integer keys in tags', function () {
+    test()->get('/models/1')->assertContent('1');
+    test()->get('/models/2')->assertContent('2');
+
+    ResponseCache::flush(['models.2']);
+
+    test()->get('/models/1')->assertContent('1');
+    test()->get('/models/2')->assertContent('3');
+});
+
 it('resolves query parameters in tags', function () {
     test()->get('/tagged/1?filter=a')->assertContent('1');
     test()->get('/tagged/1?filter=b')->assertContent('2');

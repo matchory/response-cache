@@ -10,7 +10,6 @@ declare(strict_types=1);
 
 namespace Matchory\ResponseCache;
 
-use BadMethodCallException;
 use Closure;
 use Illuminate\Contracts\Config\Repository as Config;
 use Illuminate\Contracts\Routing\{UrlGenerator, UrlRoutable};
@@ -18,12 +17,17 @@ use Illuminate\Http\Request;
 use Illuminate\Support\{Carbon, Collection};
 use Matchory\ResponseCache\Contracts\CacheStrategy;
 use Psr\SimpleCache\InvalidArgumentException;
+use Random\RandomException;
+use RuntimeException;
 use Stringable;
 use Symfony\Component\HttpFoundation\Response;
 
 use function array_filter;
 use function array_map;
 use function array_merge;
+use function array_unique;
+use function array_values;
+use function filter_var;
 use function is_scalar;
 use function preg_match_all;
 use function sprintf;
@@ -40,65 +44,96 @@ class ResponseCache
     private readonly Closure $configResolver;
 
     /**
+     * @var Closure(callable): void
+     */
+    private readonly Closure $afterTransactions;
+
+    /**
      * Creates a new response cache instance.
      *
-     * @param callable(): Config $configResolver
+     * @param callable(): Config       $configResolver
+     * @param callable(callable): void $afterTransactions Runs a callback once
+     *                                                    all open database
+     *                                                    transactions have
+     *                                                    ended
      *
      * @internal Should only be invoked by the DI container
      */
     public function __construct(
         callable $configResolver,
+        callable $afterTransactions,
         protected readonly UrlGenerator $urlGenerator,
         protected readonly Repository $cache,
         protected readonly CacheStrategy $strategy,
     ) {
-        $this->configResolver = $configResolver;
+        $this->configResolver = $configResolver(...);
+        $this->afterTransactions = $afterTransactions(...);
+    }
+
+    /**
+     * Checks, before a response exists, whether a request may be served from
+     * or stored in the cache.
+     */
+    public function isCacheable(Request $request): bool
+    {
+        return $this->strategy->isCacheable($request);
+    }
+
+    /**
+     * Looks up the response to a request in the cache. On a miss, the lookup
+     * carries the snapshot to pass to {@see put()} once the response is built.
+     *
+     * @param Request  $request Request to look up a response for
+     * @param string[] $tags    Additional tags of the cache entry
+     *
+     * @throws InvalidArgumentException
+     * @throws RandomException
+     */
+    public function lookup(Request $request, array $tags = []): Lookup
+    {
+        return $this->cache->lookup(
+            $this->strategy->key($request),
+            $this->resolveTags($tags, $request),
+        );
     }
 
     /**
      * Retrieves a response from the cache. If there is no cached response for
      * the given request, `null` will be returned.
      *
-     * @param Request       $request Request to retrieve a response from the
-     *                               cache for
-     * @param string[]|null $tags    Tags the cache entry is tagged with
+     * @param Request  $request Request to retrieve a response from the cache
+     *                          for
+     * @param string[] $tags    Additional tags of the cache entry
      *
      * @return Response|null Response if cached, `null` otherwise
      *
-     * @throws BadMethodCallException
      * @throws InvalidArgumentException
      */
-    public function get(Request $request, ?array $tags = null): ?Response
+    public function get(Request $request, array $tags = []): ?Response
     {
-        $key = $this->strategy->key($request);
-        $tags = $this->resolveTags($tags, $request);
-
-        return $this->cache->get($key, $tags);
+        return $this->cache->get(
+            $this->strategy->key($request),
+            $this->resolveTags($tags, $request),
+        );
     }
 
     /**
-     * Deletes one or more specific URLs from the cache. Note that this can't
-     * take bound parameters or tags specific to request instances into account.
+     * Deletes one or more specific URLs from the cache. As cache keys depend
+     * on the strategy, this only removes the variant the strategy computes for
+     * the current context, for example the authenticated user.
      *
-     * @param string|string[] $uri  URI or URIs to remove from the cache.
-     * @param string[]        $tags Tags to flush the cache for.
-     *
-     * @throws BadMethodCallException
-     * @throws InvalidArgumentException
+     * @param string|string[] $uri URI or URIs to remove from the cache.
      *
      * @noinspection PhpDocMissingThrowsInspection
      */
-    public function delete(array|string $uri, array $tags = []): void
+    public function delete(array|string $uri): void
     {
-        Collection::wrap($uri)->each(function (string $uri) use ($tags) {
+        Collection::wrap($uri)->each(function (string $uri) {
             $url = $this->urlGenerator->to($uri);
             /** @noinspection PhpUnhandledExceptionInspection */
             $request = Request::create($url);
-            $key = $this->strategy->key($request);
 
-            if ($this->cache->has($key, $tags)) {
-                $this->cache->delete($key, $tags);
-            }
+            $this->cache->delete($this->strategy->key($request));
         });
     }
 
@@ -109,56 +144,68 @@ class ResponseCache
      */
     public function enabled(): bool
     {
-        return $this->config()->get('response-cache.enabled', true);
+        // Values from the environment may be strings; unset or unrecognized
+        // values keep the default
+        return filter_var(
+            $this->config()->get('response-cache.enabled') ?? true,
+            FILTER_VALIDATE_BOOLEAN,
+            FILTER_NULL_ON_FAILURE,
+        ) ?? true;
     }
 
     /**
-     * Flushes all cached items, or all items with one or more tags.
+     * Flushes all cached items, or all items with one or more tags. If database
+     * transactions are open, the flush runs once all of them have ended; if it
+     * fails then, the exception is reported instead of thrown.
      *
-     * @param string[]|null $tags Tags to flush. Pass `null` to flush all tags.
+     * @param string[]|null $tags Tags to flush. Pass `null` to flush all
+     *                            items; an empty array flushes nothing.
      *
-     * @throws BadMethodCallException
+     * @throws RandomException
+     * @throws RuntimeException If the store fails to write a tag version while
+     *                          no transaction is open
      */
     public function flush(?array $tags = null): void
     {
-        $tags = array_merge($this->getDefaultTags(), $tags ?? []);
+        if ($tags === []) {
+            return;
+        }
 
-        $this->cache->flush($tags);
+        ($this->afterTransactions)(fn() => $this->cache->flush($tags));
     }
 
     /**
-     * Checks whether the response for a request has already been cached.
+     * Captures the current tag versions for a request. Pass the snapshot to
+     * {@see put()} once the response is built, so a flush that happens in the
+     * meantime invalidates it.
      *
-     * @param Request       $request Request to check the cache status for
-     * @param string[]|null $tags    Tags the cached entry is tagged with
+     * @param Request  $request Request to take a snapshot for
+     * @param string[] $tags    Additional tags of the cache entry
      *
-     * @return bool `true` if a cached response exists, `false` otherwise
+     * @return Snapshot|null Snapshot, or `null` if the tag versions could not
+     *                       be established.
      *
-     * @throws BadMethodCallException
      * @throws InvalidArgumentException
+     * @throws RandomException
      */
-    public function has(Request $request, ?array $tags = null): bool
+    public function snapshot(Request $request, array $tags = []): ?Snapshot
     {
-        $key = $this->strategy->key($request);
-        $tags = $this->resolveTags($tags, $request);
-
-        return $this->cache->has($key, $tags);
+        return $this->cache->snapshot($this->resolveTags($tags, $request));
     }
 
     /**
      * Caches the response to a given request, if it matches the cache strategy.
      *
-     * @param Request       $request  Request to cache a response for
-     * @param Response      $response Response to cache
-     * @param string[]|null $tags     Tags to tag the cache entry with
-     * @param int|null      $ttl      Time-to-live for the cache entry
-     *
-     * @throws BadMethodCallException
+     * @param Request  $request  Request to cache a response for
+     * @param Response $response Response to cache
+     * @param Snapshot $snapshot Tag versions captured before the response was
+     *                           built, see {@see lookup()} and {@see snapshot()}
+     * @param int|null $ttl      Time-to-live for the cache entry
      */
     public function put(
         Request $request,
         Response $response,
-        ?array $tags = null,
+        Snapshot $snapshot,
         ?int $ttl = null,
     ): void {
         // Escape hatch to bypass caching via middleware
@@ -174,16 +221,11 @@ class ResponseCache
 
         $ttl = $ttl ?? $this->getDefaultTtl();
         $key = $this->strategy->key($request);
-        $tags = $this->resolveTags(
-            $tags,
-            $request,
-            $response,
-        );
 
         $response = $this->addServerTiming($response);
         $response = $this->addCacheStatus($response);
 
-        $this->cache->put($key, $response, $tags, $ttl);
+        $this->cache->put($key, $response, $snapshot, $ttl);
     }
 
     /**
@@ -241,7 +283,10 @@ class ResponseCache
      */
     protected function getDefaultTtl(): ?int
     {
-        return $this->config()->get('response-cache.ttl');
+        $ttl = $this->config()->get('response-cache.ttl');
+
+        // Values from the environment are strings
+        return $ttl === null ? null : (int) $ttl;
     }
 
     /**
@@ -311,37 +356,33 @@ class ResponseCache
 
             // Replace the matched expression (`{foo}`) with the value found in
             // the request inside the tag
-            $tag = str_replace($match, $value, $tag);
+            $tag = str_replace($match, (string) $value, $tag);
         }
 
         return $tag;
     }
 
     /**
-     * Resolves all tags to apply to a given request/response pair, and replaces
-     * bound parameters in all cache tags.
+     * Resolves all tags to apply to a given request, and replaces bound
+     * parameters in all cache tags.
      *
-     * @param string[]|null $tags     Individual tags to add to this response.
-     * @param Request       $request  Request instance.
-     * @param Response|null $response Response instance.
+     * @param string[] $tags    Individual tags to add to this request.
+     * @param Request  $request Request instance.
      *
      * @return string[] List of finalized tags.
      */
-    protected function resolveTags(
-        ?array $tags,
-        Request $request,
-        ?Response $response = null,
-    ): array {
+    protected function resolveTags(array $tags, Request $request): array
+    {
         $resolved = array_merge(
-            $this->strategy->tags($request, $response),
+            $this->strategy->tags($request),
             $this->getDefaultTags(),
-            $tags ?? [],
+            $tags,
         );
 
-        return array_map(fn(string $tag) => $this->replaceBinding(
-            $tag,
-            $request,
-        ), array_filter($resolved));
+        return array_values(array_unique(array_map(
+            fn(string $tag) => $this->replaceBinding($tag, $request),
+            array_filter($resolved),
+        )));
     }
 
     private function config(): Config

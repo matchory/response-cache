@@ -90,14 +90,22 @@ This setting specifies the amount of time responses will be cached before being 
 Defaults to `60 * 60 * 24`, or exactly 24 hours.
 
 ### `store` (Environment variable: `RESPONSE_CACHE_STORE`)
-Here you may pass any cache store defined in your `config/cache.php` file. Please note that not all stores support tagging: For better control over and
-increased performance of your cache, we strongly recommend using a store with tag support, like Redis or APC.
+Here you may pass any cache store defined in your `config/cache.php` file. Tags work on every store, including `file`, `database` and `dynamodb`; the store
+does not need to support Laravel's cache tags. The `failover` store is not supported, because it can lose flushes during an outage (see
+[Limitations](#limitations)).
 
-Defaults to `file`.
+Defaults to `null`, which uses your application's default cache store.
+
+### `tag_ttl` (Environment variable: `RESPONSE_CACHE_TAG_TTL`)
+Every tag has a version, which is replaced when the tag is flushed (see [Cache Tags](#cache-tags)). This setting specifies how long versions are kept, in
+seconds. Versions are never refreshed: once one expires, all responses carrying that tag become misses, and the next request starts a new version. Cached
+responses therefore never outlive `tag_ttl`, even if their own TTL is longer, and responses cached without a TTL expire after `tag_ttl`.
+
+Defaults to `60 * 60 * 24 * 30`, or 30 days.
 
 ### `tags` (Environment variable: `RESPONSE_CACHE_TAGS`)
-If your store supports tags, all responses cached will also be tagged with these tags by default. Additional tags may be used depending on the middleware and
-strategy.
+Tags added to every cached response. Additional tags may be used depending on the middleware and strategy. Flushing one of the default tags invalidates every
+cached response.
 
 Defaults to `[]`.
 
@@ -122,16 +130,16 @@ Route::get('/kitten')->middleware('bypass_cache');
 ```
 
 ### Flushing the cache manually
-To clear the cache manually, you can use the `response-cache:flush` artisan command:
+To clear the cache manually, you can use the `response-cache:clear` artisan command (or its alias, `response-cache:flush`):
 
 ```bash
-php artisan response-cache:flush
+php artisan response-cache:clear
 ```
 
-This will flush the entire response cache. To delete a given set of cache tags only, add them to the command:
+This will flush the entire response cache, and nothing else in the cache store. To flush a given set of cache tags only, add them to the command:
 
 ```bash
-php artisan response-cache:flush tag-1 tag-2 ... tag-n
+php artisan response-cache:clear tag-1 tag-2 ... tag-n
 ```
 
 ### Flushing the cache programmatically
@@ -154,7 +162,21 @@ class ExampleObserver {
 }
 ```
 
-By invoking the `flush` method, the entire store (for the given tags) will be purged. To be more selective, use the `delete` method:
+Calling `flush()` without arguments (or with `null`) invalidates every cached response. Passing tags invalidates every response carrying at least one of
+them, regardless of its other tags, the user it was cached for, or its query string. Passing an empty array flushes nothing, so a computed tag list that
+happens to be empty can never clear the whole cache.
+
+Flushing is cheap: it writes one small cache key per tag, so it's safe to call many times from observers. Invalidated responses are not deleted; they stay in
+the store until their TTL expires. If you need the space back immediately, run `php artisan cache:clear` on that store.
+
+**Flushes run after database transactions end.** If you flush while a transaction is open, the flush is deferred until every open transaction, on every
+connection, has ended, so other requests can't cache uncommitted data in the meantime. The flush runs after a rollback, too, since the data may have been
+written outside that transaction or on another connection; that only costs some cache misses. Outside a transaction, the flush runs immediately.
+
+If the cache store fails to write a flush, `flush()` throws a `RuntimeException`. A deferred flush runs while Laravel finishes the transaction, so a failure
+there is reported to your exception handler instead, and the rest of your after-commit callbacks still run.
+
+To be more selective, use the `delete` method:
 
 ```php
 use Matchory\ResponseCache\Facades\ResponseCache;
@@ -163,15 +185,20 @@ ResponseCache::delete('/example/url');
 ResponseCache::delete(['/example/1', '/example/2']);
 ```
 
-> **Note:** This will not work for cache items that require context information, such as user authentication. If you hit this problem, you'll probably want to
-> work with tags instead.
+> **Note:** This only deletes the response cached for the current context, such as the authenticated user, because cache keys include it. To clear a URL
+> for everyone, work with tags instead.
 
 #### Cache Tags
 Cache tags are a simple, yet very powerful mechanism for efficient cache usage. By applying tags to a set of cached items, you can purge all of them, without
 ever knowing the individual cache keys of these items. Say, there are lots of cached data points all related to "flights": plane schedules, arrival dates,
 passenger records, etc. All is fine and well, until a flight is cancelled! Now, we will need to purge the cache for anything that includes the flight in
-question. This would be a logical nightmare, hadn't we set up cache tags: Instead of deleting lots of items manually, we instruct Laravel to purge all items
-tagged with the flight number, and we're good to go!
+question. This would be a logical nightmare, hadn't we set up cache tags: Instead of deleting lots of items manually, we flush the tag with the flight
+number, and we're good to go!
+
+Tags work on every cache store; they don't use Laravel's cache tags. Instead, every tag has a version: a random token stored in the cache. Each cached response
+records the versions of its tags when it is built, and it is only served while all of them are still current. Flushing a tag writes a new version, which
+makes every response carrying it a miss. The versions are read before your controller runs, so a flush that happens while a response is being built
+invalidates that response, too.
 
 This library is built heavily around the concept of cache tags: By tagging properly, you can make granular cache flushing a breeze. Tags can be added to routes
 using several approaches:
@@ -243,7 +270,23 @@ class MyStrategy extends BaseStrategy
 - The `hash` method builds a hash of the given cache key (by default it uses `md5`), so the key length stays consistent.
 
 #### Customizing cache bypass
-To customize whether a response is cached or not, you can implement one or more helpers:
+Strategies decide in two steps whether to cache. Before the response exists, `isCacheable` decides whether a request may be served from or stored in the
+cache at all. Requests it rejects skip the cache entirely, without reading anything. By default, it accepts `GET` and `HEAD` requests:
+
+```php
+use Illuminate\Http\Request;
+use Matchory\ResponseCache\Support\BaseStrategy;
+
+class MyStrategy extends BaseStrategy
+{
+    public function isCacheable(Request $request): bool
+    {
+        return $this->isMethodCachable($request);
+    }
+}
+```
+
+Once the response exists, `shouldCache` decides whether to store it:
 
 ```php
 use Illuminate\Http\Request;
@@ -254,7 +297,7 @@ class MyStrategy extends BaseStrategy
 {
     public function shouldCache(Request $request, Response $response): bool
     {
-        if (! $this->isMethodCachable($request)) {
+        if (! $this->isCacheable($request)) {
             return false;
         }
 
@@ -269,16 +312,16 @@ By default, this will cache any request with the `GET` or `HEAD` methods, and re
 Tagging cached responses is an immensely powerful feature that allows you to flush a collection of cache entries if something happens. So if a single member of
 a collection is deleted, for example, you can remove all cached instances of the same collection, without having to know the exact cache keys used to retrieve
 them!  
-To make this as easy as possible, strategies provide a method to pull tags from a request and response:
+To make this as easy as possible, strategies provide a method to pull tags from a request. Tags must be derivable from the request alone, because they
+are needed to look up a cached response before any response exists:
 
 ```php
 use Illuminate\Http\Request;
 use Matchory\ResponseCache\Support\BaseStrategy;
-use Symfony\Component\HttpFoundation\Response;
 
 class MyStrategy extends BaseStrategy
 {
-    public function tags(Request $request, Response|null $response = null): array
+    public function tags(Request $request): array
     {
         return [
             $request->attributes->get('customer.id')
@@ -314,46 +357,11 @@ This library exposes some events you can listen for and act accordingly. This is
 Emitted if a response was found in the cache. Includes the request instance.
 
 #### `Miss`
-Emitted if a response could not be found in the cache or was [indicated as non-cachable by the caching strategy](#caching-strategies) and thus had to be
-generated by the application. Includes the request instance.
+Emitted if a response could not be found in the cache and thus had to be generated by the application. Includes the request instance. Requests the
+[caching strategy](#caching-strategies) rejects in `isCacheable`, such as `POST` requests, bypass the cache without emitting any event.
 
 #### `Flush`
 Emitted if the cache was flushed. Includes the tags that were flushed, or `null` if all tags were flushed.
-
-### Manual response serialization
-By default, the response cache uses a [cache repository implementation](./src/Repository.php) with a very simple serialization method: _Doing nothing_. Any
-serialization is deferred to Laravel's cache implementation. In rare cases, you may need to change this behavior and modify a response before serializing or
-after hydrating it.  
-To do so, start by extending the `Repository` class:
-
-```php
-use Matchory\ResponseCache\Repository;
-use Symfony\Component\HttpFoundation\Response;
-
-class CustomRepository extends Repository
-{
-    protected function serialize(Response $response) : mixed
-    {
-        return serialize($response); 
-    }
-
-    protected function hydrate(mixed $responseData): Response
-    {
-        return unserialize($responseData, [Response::class])
-    }
-}
-```
-
-Override the container binding in your `AppServiceProvider`, so your repository will be used instead of the default:
-
-```php
-use Matchory\ResponseCache\Repository;
-
-protected function register():void
-    {
-        $this->app->bind(Repository::class, CustomRepository::class);
-    }
-```
 
 ### Debugging
 Cache issues can be a little annoying to debug. This library has several facilities built in to make the process as simple as possible:
@@ -363,5 +371,50 @@ Cache issues can be a little annoying to debug. This library has several facilit
    information will automatically show up in your browser's developer tools!
 2. **Listen to cache events**: By listening to [the cache events](#reacting-to-cache-events), you can make sure everything is working as intended.
 3. **Temporarily or conditionally disable caching**: By changing the `response-cache.enabled` setting, you can quickly determine whether caching is the culprit.
-4. **Use a custom repository**: [Override the built-in serialization method](#manual-response-serialization) to take control of response serialization and
-   hydration.
+
+Limitations
+-----------
+Tag versioning never serves a response after a flush that it knows about, but some situations are outside its control:
+
+- **Data read before the versions.** The cache middleware runs after authentication and route binding, so a bound model or the authenticated user is loaded
+  before the tag versions are read. A write that commits and flushes in those few milliseconds produces a response built from the old data but stamped with
+  the new version. It is served until the next flush of one of its tags, or until its TTL expires.
+- **Read replicas.** A request that reads from a lagging replica after a flush can cache old data under the new version, just like above.
+- **Store replication and failover.** If the cache store loses a write, for example during a Redis failover with asynchronous replication, or when
+  Memcached remaps a dead server, an old version can come back and make stale responses valid again. This is inherent to those stores. For the same reason,
+  Laravel's `failover` cache store is refused.
+- **DynamoDB** reads are eventually consistent, which leaves a short window after a flush. The version of the internal global tag is read on every request,
+  which makes it a hot partition.
+- **Local stores.** The `file` and `apc` stores are local to a host, and the `array` store to a process. A flush only reaches the host or worker that runs
+  it, so use them on a single host only.
+- **Failed commits.** Laravel runs no after-commit or rollback callbacks when a commit itself fails, and none after an earlier callback of the same
+  transaction throws. A flush deferred in such a transaction is skipped, just like your other after-commit callbacks. A failed commit normally means the
+  database rolled the transaction back, so nothing changed; only a connection lost during the commit leaves it unknown whether the data was written.
+- **Hit rate.** Flushing a broad tag like `users` on every write keeps all responses carrying it cold on write-heavy tables, and flushing everything after a
+  deployment causes a burst of misses. The same burst happens every `tag_ttl` (30 days by default) after the first response was cached, when the version
+  of the internal global tag expires. There is no lock against many requests rebuilding the same response at once.
+
+Upgrading to v2
+---------------
+Version 2 replaces Laravel's cache tags with tag versioning. Existing cache entries are not read anymore, which just causes misses after the upgrade.
+
+- **Strategies:** `CacheStrategy::tags()` takes the request only: `tags(Request $request): array`. Tags derived from the response are no longer supported.
+- **Strategies:** `CacheStrategy` has a new method, `isCacheable(Request $request): bool`. Custom strategies extending `BaseStrategy` inherit it.
+- **Events:** requests rejected by `isCacheable` (by default, anything but `GET` and `HEAD`) no longer emit a `Miss` event.
+- **Flushing:** `ResponseCache::flush($tags)` no longer adds the default tags, so it flushes exactly the given tags. `flush([])` now does nothing; use
+  `flush()` to flush everything.
+- **Flushing:** flushes while a database transaction is open run once all open transactions have ended, whether they commit or roll back.
+- **Flushing:** `flush()` throws a `RuntimeException` if the cache store fails to write. Failures of deferred flushes are reported to the exception handler.
+- **Flushing:** invalidated responses are no longer deleted from the store; they expire with their TTL.
+- **`ResponseCache` methods:** `has()` was removed; use `get()` or `lookup()`. `put()` requires a `Snapshot` of the tag versions, taken before the response
+  is built, in place of the tags: `put($request, $response, $snapshot, $ttl)`. Take one with `snapshot($request, $tags)`, or use the one returned by
+  `lookup($request, $tags)` on a miss. Either is `null` if the tag versions could not be established; don't cache the response then. `get()` and
+  `lookup()` take a tags array (`[]` by default) instead of `null`. `delete()` no longer takes tags.
+- **Cached responses:** responses are stored as their status, headers and content, so caching works even if `serializable_classes` is restricted in
+  `config/cache.php` (the default in Laravel 13). A cached response is returned as an `Illuminate\Http\Response` with the same status, headers and
+  content, whatever class the original response had. Responses without content, such as streamed responses and file downloads, are not cached.
+- **`Repository`:** the methods `get()`, `has()`, `getStore()`, `supportsTags()`, `serialize()` and `hydrate()` were removed, along with custom
+  serialization through a `Repository` subclass. Its constructor takes the tag TTL as a third argument.
+- **Configuration:** `store` defaults to `null` (your default cache store) instead of `file`. The new `tag_ttl` option sets how long tag versions are kept
+  (30 days by default) and must be at least one second. The `failover` cache store is refused with an `InvalidArgumentException`.
+- **Stores:** tags work on every cache store; a store with tag support is no longer needed.
